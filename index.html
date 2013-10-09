@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>BEP Cancer Subtype Simulator</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
+		<link href="css/bep.css" rel="stylesheet" media="screen">
+	</head>
+	<body>
+		<div class="container">
+			<div class="page-header">
+				<h1>BEP Cancer Subtype Simulator <small>v1.0</small></h1>
+			</div>
+		
+			<div class="row">
+				<div class="span5 controls">
+					<div class="row">
+						<div class="span2">maxBinary</div>
+						<div class="span2"><input id="maxBinary" type="range" min="5" max="63" value="63"></div>
+						<div class="span1" id="maxBinary_label">63</div>
+					</div>
+					<div class="row">
+						<div class="span2">mutationRate</div>
+						<div class="span2"><input id="mutationRate" type="range" min="0" max="100" value="10"></div>
+						<div class="span1" id="mutationRate_label">0.1</div>
+					</div>
+					<div class="row">
+						<div class="span2">growthRate</div>
+						<div class="span2"><input id="growthRate" type="range" min="0" max="100" value="10"></div>
+						<div class="span1" id="growthRate_label">0.1</div>
+					</div>
+					<div class="row">
+						<div class="span2">deathRate</div>
+						<div class="span2"><input id="deathRate" type="range" min="1" max="1000" value="10"></div>
+						<div class="span1" id="deathRate_label">0.0000001</div>
+					</div>
+					<div class="row">
+						<div class="span2">deathRateForNonStem</div>
+						<div class="span2"><input id="deathRateForNonStem" type="range" min="0" max="1000" value="10"></div>
+						<div class="span1" id="deathRateForNonStem_label">0.01</div>
+					</div>
+					<div class="row">
+						<div class="span2">symmetricReplicationP</div>
+						<div class="span2"><input id="symmetricReplicationProbablity" type="range" min="0" max="1000" value="100"></div>
+						<div class="span1" id="symmetricReplicationProbablity_label">0.1</div>
+					</div>
+					<div class="row">
+						<div class="span2">maxTime</div>
+						<div class="span2"><input id="maxTime" type="range" min="100000" max="10000000" value="5000000"></div>
+						<div class="span1" id="maxTime_label">5000000</div>
+					</div>
+					<div class="row">
+						<div class="span2">maxPopulationSize</div>
+						<div class="span2"><input id="maxPopulationSize" type="range" min="100" max="5000" value="100"></div>
+						<div class="span1" id="maxPopulationSize_label">300</div>
+					</div>
+					<div class="row">
+						<div class="span2">genomeSize</div>
+						<div class="span2"><input id="genomeSize" type="range" min="100" max="1000" value="300"></div>
+						<div class="span1" id="genomeSize_label">300</div>
+					</div>
+					<div class="row">
+						<div class="span2">driverSize</div>
+						<div class="span2"><input id="driverSize" type="range" min="5" max="20" value="10"></div>
+						<div class="span1" id="driverSize_label">10</div>
+					</div>
+					<div class="row">
+						<div class="span2">essensialGeneSize</div>
+						<div class="span2"><input id="essensialGeneSize" type="range" min="0" max="20" value="0"></div>
+						<div class="span1" id="essensialGeneSize_label">0</div>
+					</div>
+					<div class="row">
+						<div class="span2">fitnessIncrease</div>
+						<div class="span2"><input id="fitnessIncrease" type="range" min="1" max="20" value="5"></div>
+						<div class="span1" id="fitnessIncrease_label">5</div>
+					</div>
+					<div class="row">
+						<div class="span2">initialPopulationSize</div>
+						<div class="span2"><input id="initialPopulationSize" type="range" min="1" max="20" value="10"></div>
+						<div class="span1" id="initialPopulationSize_label">10</div>
+					</div>
+					
+					<div class="row">
+						<div class="span5">
+							<br />
+							<br />
+							<button class="btn btn-large btn-info" type="button" id="startSimulation">Start Simulation</button>
+
+						</div>
+					</div>
+					
+				</div>
+				<div class="span7 simulation">
+					<canvas id="sim" width="540" height="540" ></canvas>
+				</div>
+			</div>
+		</div>
+		<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+		<script src="js/jquery-2.0.3.min.js"></script>
+		<script src="js/underscore-min.js"></script>
+		<script src="js/science.v1.min.js"></script>
+		<script src="js/ui.js"></script> 
+		<script src="js/bep.js"></script>
+		<!-- Include all compiled plugins (below), or include individual files as needed -->
+		<!-- <script src="js/bootstrap.min.js"></script> -->
+	</body>
+</html>

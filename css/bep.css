@@ -1,0 +1,14 @@
+.controls {
+}
+
+.controls input {
+	width: 100%;
+}
+.simulation {
+}
+
+.simulation canvas {
+	width: 540px;
+	height: 540px;
+	background: #efefef;
+}
