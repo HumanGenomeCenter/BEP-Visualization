@@ -86,9 +86,9 @@ var drawImage = function() {
 	var cells = _.values(bep.cells);
 	for(var i=0; i<cells.length; i++) {
 		var cell = cells[i];
-		ctx.fillRect(cells[i].x*s, cells[i].y*s, s, s);
+		ctx.fillStyle = cell.color;
+		ctx.fillRect(cell.x*s, cell.y*s, s, s);
 	}
-
 
 	ctx.restore();
 	
