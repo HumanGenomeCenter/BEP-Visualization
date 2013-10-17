@@ -1,9 +1,32 @@
 
+// Worker Test
+var worker = new Worker("js/worker.js");
+
+console.time("worker");
+
+worker.postMessage("test");
+worker.onmessage = function(e) {
+	console.timeEnd("worker");
+	workerData = e.data;
+	worker.terminate();
+}
+
+
+
 // underscore mixins
 _.mixin({
-	copy: function(originalArray) {
-		var copy = [];					// new empty array
-		$.extend(true, copy, originalArray);	// deep copy this onto a
+	copy: function(original) {
+		var copy;
+		if (original instanceof Cell) {
+			copy = new Cell();
+		} else if (original instanceof Array) {
+			copy = [];
+		} else if (original instanceof Object) {
+			copy = {};
+		} else {
+			console.log("Error. Could not make a copy.");
+		}
+		$.extend(true, copy, original);	// deep copy this onto a
 		return copy;
 	},
 	has: function(arr, value) {
@@ -14,15 +37,19 @@ _.mixin({
 	}
 });
 
+
+
 // Gobal Bep Object
 var bep = {};
 
 
-var Cell = function(x,y) {
+// Single Cell
+var Cell = function(x, y, color) {
 	this.x = x;
 	this.y = y;
+	this.color = (color === undefined) ? "#000000" : color;
 	this.init();
-	bep.cells[x+" "+y] = this;
+	bep.cells[x+" "+y] = this;		// add to global cell array
 }
 
 Cell.prototype = {
@@ -38,7 +65,6 @@ Cell.prototype = {
 		console.log("draw");
 	}
 }
-
 
 
 
@@ -95,7 +121,6 @@ bep.initializeGenomes = function() {
 	bep.genome2mutatedGeneMap = {};
 
 	bep.fillCore();
-	
 	
 	function initArray(xLength, yLength, zLength, initalValue) {
 		console.log("initArray", xLength, yLength, zLength, initalValue);
@@ -309,65 +334,59 @@ bep.genome2fitness = function(genome) {
 }
 
 bep.fillCore = function() {
-	bep.setNormalCell(0, 0);
-
+	// add color
+	
+	var currentColorNr = 0;
+	var getNextColor = function() {
+		var color = colorbrewer.Set1["9"][currentColorNr];
+		currentColorNr++;
+		if (currentColorNr === bep.initialPopulationSize) {
+			currentColorNr = 0;
+		}
+		return color;
+	}
+	
+	bep.setNormalCell(0, 0, getNextColor());
+	
 	for (var r=1; r<bep.limXY; r++) {
 		for (var y=r; y>-r; y--) {
-			bep.setNormalCell(r, y);
+			bep.setNormalCell(r, y, getNextColor());
 			bep.setMaxMinXY(r, y);
 			if (_.size(bep.cells) === bep.initialPopulationSize) {
-				bep.fillCoreFinished();
 				return;
 			}
 		}
 		for (var x=r; x>-r; x--) {
-			bep.setNormalCell(x, -r);
+			bep.setNormalCell(x, -r, getNextColor());
 			bep.setMaxMinXY(x, -r);
 			if (_.size(bep.cells) === bep.initialPopulationSize) {
-				bep.fillCoreFinished();
 				return;
 			}
 		}
 		for (var y=-r; y<r; y++) {
-			bep.setNormalCell(-r, y);
+			bep.setNormalCell(-r, y, getNextColor());
 			bep.setMaxMinXY(-r, y);
 			if (_.size(bep.cells) === bep.initialPopulationSize) {
-				bep.fillCoreFinished();
 				return;
 			}
 		}
 		for (var x=-r; x<r; x++) {
-			bep.setNormalCell(x, r);
+			bep.setNormalCell(x, r, getNextColor());
 			bep.setMaxMinXY(x, r);
 			if (_.size(bep.cells) === bep.initialPopulationSize) {
-				bep.fillCoreFinished();
 				return;
 			}
 		}
 	}
 }
 
-bep.fillCoreFinished = function() {
-	console.log("bep.fillCoreFinished():");
-	console.log("initialPopulationSize: " + bep.initialPopulationSize);
-	console.log("current populationSize/_.size(bep.cells): " + _.size(bep.cells));
-	console.log("maxX: " + bep.maxX + ", minX: " + bep.minX);
-}
 
-bep.setNormalCell = function(x, y) {
+
+bep.setNormalCell = function(x, y, color) {
+
 	// Cell Approach:
-	var c = new Cell(x,y);	// also sets genome array to 0 and state to t,f,f
+	var c = new Cell(x, y, color);	// also sets genome array to 0 and state to t,f,f
 	
-	/*
-	// create empty genome
-	var genomeArray = [];
-	for (var i=0; i<bep.G; i++) {
-		genomeArray[i] = 0;
-	}
-	// change state -> occupied
-	var stateArray = [true, false, false];
-	bep.set(x, y, genomeArray, stateArray);
-	*/
 
 }
 
@@ -974,7 +993,6 @@ bep.run = function() {
 		
 	}	
 };
-
 
 
 
