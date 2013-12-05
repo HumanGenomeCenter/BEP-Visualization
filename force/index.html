@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<title>BEP Force</title>
+	<link rel="stylesheet" href="../css/bootstrap.css" charset="utf-8">
+	<style type="text/css" media="screen">
+		body {
+			background: #eee;
+			margin: 0 auto;
+		}
+		.container {
+		 /* margin: 0 auto; */
+		  width: 970px !important;
+		}
+		svg {
+			background: #fff;
+		}
+	</style>
+	
+</head>
+
+<body>
+	
+<div class="container">
+	<div class="page-header">
+	  <h1>B.E.P Simulator <small>Cancer-subtype Simulation</small></h1>
+	</div>
+	<div class="row">
+		<div class="col-xs-2">
+			<p>
+				<button type="button" class="btn btn-default" id="addCell">Add Cell</button>
+			</p>
+			<p>
+				<button type="button" class="btn btn-primary" id="resetCells">Reset</button>
+			</p>
+			<div class="btn-group">
+				<button type="button" class="btn btn-info btn-xs"id="zoomIn"><span class="glyphicon glyphicon-zoom-in"></span></button>
+				<button type="button" class="btn btn-info btn-xs"id="zoomOut"><span class="glyphicon glyphicon-zoom-out"></span></button>
+				<button type="button" class="btn btn-info btn-xs"id="zoomReset"><span class="glyphicon glyphicon-search"></span></button>
+			</div>
+		</div>
+		<div class="col-xs-10" id="cells"></div>
+	</div>
+</div>
+<script src="../js/d3.min.js"></script>
+<script src="../js/jquery-2.0.3.min.js"></script>
+<!-- <script src="../js/underscore-min.js"></script> -->
+<script>
+
+// https://gist.github.com/mbostock/3231307
+
+var width = 800,
+    height = 500;
+
+// define cell size
+var cellRadius = function() {
+	return Math.floor(Math.random() * 5 + 10);
+//	return 2;
+}
+
+// initial nodes
+var nodes = d3.range(6).map(function(i) { 
+		return {	radius: cellRadius(),
+					x: width/2 + (Math.floor(Math.random()*10-5)),
+					y: height/2 + (Math.floor(Math.random()*10-5)),
+				}; 
+	});
+
+var color = d3.scale.category20c();
+
+var root = {};
+// root.radius = 20;
+// root.fixed = true;
+ 
+var force = d3.layout.force()
+	.gravity(0.00)
+// 	.charge(function(d, i) { return i ? 0 : -2000; })
+	.charge(2000)
+	.friction(0.2)
+	.nodes(nodes)
+	.size([width, height]);
+ 
+force.start();
+
+
+var lastZoomEvent = {'scale':1, 'translate':[0,0]};		// default zoom details
+ 
+var zoom = d3.behavior.zoom()
+	.scaleExtent([0.05, 10])	// 1->100%
+	.on("zoom", zoomed);		// register zoom event
+
+function zoomed() {
+	lastZoomEvent.scale = d3.event.scale;			// cache zoom details
+	lastZoomEvent.translate = d3.event.translate;
+//	console.log(d3.event, "translate: " + d3.event.translate + ", scale:" + d3.event.scale);
+	inner.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+}
+
+
+	
+var inner = d3.select("div#cells").append("svg")
+		.attr("width", width)
+		.attr("height", height)
+		.call(zoom)
+	.append("g")
+ 		.attr("id", "inner");
+	
+
+inner.selectAll("circle")
+	.data(nodes)
+	.enter()
+		.append("circle")
+			.attr("r", function(d) { return d.radius; })
+			.attr("x", function(d) { return d.x; })
+			.attr("y", function(d) { return d.y; })
+			.attr("fill", function(d, i) {
+				d.originalColor = color(i % 4); 
+				return color(i % 4); 
+			});
+
+
+
+
+	
+/*
+.transition()				
+	.duration(function(d, i) { return 100*i})
+*/
+force.on("tick", function(e) {
+	var q = d3.geom.quadtree(nodes),
+	i = 0,
+	n = nodes.length;
+	while (++i < n) q.visit(collide(nodes[i]));
+	inner.selectAll("circle")
+		.attr("cx", function(d) { return d.x; })
+		.attr("cy", function(d) { return d.y; });
+});
+ 
+/*
+var dragging = false;
+var circleElement;
+svg.selectAll("circle").on("mousedown", function(circle) {
+	console.log(circle);
+	root = circle;
+	root.fixed = true;
+	root.color = this.style["fill"];				// temp save node color
+	this.style["fill"] = "f00";						// highlight node	
+	circleElement = this;							// save handler for circle svg	
+	dragging = true;
+});
+
+svg.on("mousemove", function() {
+	if (dragging) {
+		var p1 = d3.mouse(this);
+		root.px = p1[0];
+		root.py = p1[1];
+	}
+
+});
+
+svg.on("mouseup", function() {
+	if (dragging) {
+		dragging = false;
+		delete root.fixed;
+		circleElement.style["fill"] = root.color;		// restore color
+		delete root.color;
+		force.resume();
+	}
+});
+*/
+
+function collide(node) {
+
+	var r = node.radius,	
+	nx1 = node.x - 2*r,
+	nx2 = node.x + 2*r,
+	ny1 = node.y - 2*r,
+	ny2 = node.y + 2*r;
+
+	return function(quad, x1, y1, x2, y2) {
+		if (quad.point && (quad.point !== node)) {
+			var x = node.x - quad.point.x,
+			y = node.y - quad.point.y,
+			l = Math.sqrt(x * x + y * y),
+			r = node.radius + quad.point.radius;
+			if (l < r) {
+				l = (l - r) / l * .5;
+				node.x -= x *= l;
+				node.y -= y *= l;
+				quad.point.x += x;
+				quad.point.y += y;
+			}
+		}
+		return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+	};
+}
+
+
+
+
+// Interactions
+
+var interpolateNodeSize = function(node, easeMode) {
+	if (node.radius === node.finalRadius) return;
+	var interpol = d3.interpolateNumber(node.radius, node.finalRadius);
+	var ease= d3.ease(easeMode);
+	var duration = 2000;
+	var timer = d3.timer(function(t){
+		if (t>duration) {
+			node.radius = node.finalRadius;	// make sure the radius become the original radius
+			return true; // true ends timer
+		}
+		node.radius = interpol(ease(t/duration));
+	});	
+}
+
+
+
+
+
+$(document).ready(function() {
+
+	
+	$("#addCell").click(function() {
+		
+		force.charge(0);	// neutralize force charge
+		//force.stop();
+		
+		var randomNode = nodes[Math.floor(Math.random()*nodes.length)];
+		var randomAngle = Math.random()*Math.PI*2;
+		var x = Math.cos(randomAngle)*randomNode.radius + randomNode.x;
+		var y = Math.sin(randomAngle)*randomNode.radius + randomNode.y;
+		nodes.push({radius:0, finalRadius:cellRadius(), x:x, y:y});			// add new node next to parent node, random angle
+		
+	//	force.start();
+	
+
+		
+		circles = inner.selectAll("circle")			// select
+			.data(nodes)							// rebind
+		
+		circles.enter()								// enter
+			.append("circle")
+				.attr("r", 0)
+				.attr("x", function(n) { return n.x; })
+				.attr("y", function(n) { return n.y; })
+				.attr("fill", function(n, i) { n.originalColor = color(i % 4); return "#f00"; })
+				.transition()
+					.duration(2000)
+					.ease("cubic-in-out")		// match with interpolateNodeSize()
+					.attr("fill", function(n) {return n.originalColor})
+					.attr("r", function(n) { return n.finalRadius; })
+					.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
+	
+				;	// update visuals
+				
+		force.start();
+		
+	
+	});
+	
+	$("#resetCells").click(function() {
+		console.log("reset");
+	});
+	
+	var zooming = false;
+	$("#zoomIn").click(function() {
+		console.log("zoom in");
+		if (!zooming) {
+			zooming = true;
+			endScale = zoom.scale()+1;
+			startTranslate = zoom.translate();
+			endTranslate = [startTranslate[0]-width/2, startTranslate[1]-height/2];
+			iTranslate = d3.interpolate(startTranslate, endTranslate);
+			iScale = d3.interpolate(zoom.scale(), endScale);
+			d3.transition()
+				.duration(750)
+				.tween("zoom", function() {
+					return function(t) {
+						inner.attr("transform", "translate(" + iTranslate(t) + ")scale(" + iScale(t) + ")");
+					};
+				})
+				.each("end", function() {
+					zoom.scale(endScale).translate(endTranslate);		// reset zoom behaviour
+					zooming = false;
+				});
+		}
+	
+	});
+	
+	$("#zoomOut").click(function() {
+		console.log("zoom out");
+		endScale = zoom.scale()-1;
+		startTranslate = zoom.translate();
+		endTranslate = [startTranslate[0]+width/2, startTranslate[1]+height/2];
+		iTranslate = d3.interpolate(startTranslate, endTranslate);
+		iScale = d3.interpolate(zoom.scale(), endScale);
+		d3.transition()
+			.duration(750)
+			.tween("zoom", function() {
+				return function(t) {
+					inner.attr("transform", "translate(" + iTranslate(t) + ")scale(" + iScale(t) + ")");
+				};
+			})
+			.each("end", function() {
+				zoom.scale(endScale).translate(endTranslate);		// reset zoom behaviour
+			});
+	});
+	
+	$("#zoomReset").click(function() {
+		console.log("zoom reset");
+		iTranslate = d3.interpolate(lastZoomEvent.translate, [0,0]);
+		iScale = d3.interpolate(lastZoomEvent.scale, 1);
+		d3.transition()
+			.duration(750)
+			.tween("zoom", function() {
+				return function(t) {
+					inner.attr("transform", "translate(" + iTranslate(t) + ")scale(" + iScale(t) + ")");
+				};
+			})
+			.each("end", function() {
+				zoom.scale(1).translate([0,0]);		// reset zoom behaviour
+			});
+	});
+});	
+
+ 
+</script>
