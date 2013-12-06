@@ -28,7 +28,10 @@
 	<div class="row">
 		<div class="col-xs-2">
 			<p>
-				<button type="button" class="btn btn-default" id="addCell">Add Random Cell</button>
+				<button type="button" class="btn btn-default" id="addCell">Add Cell</button>
+			</p>
+			<p>
+				<button type="button" class="btn btn-default" id="addManyCells">Add 100 Cells</button>
 			</p>
 			<p>
 				<button type="button" class="btn btn-primary" id="resetCells">Reset</button>
@@ -259,48 +262,11 @@ $(document).ready(function() {
 
 	
 	$("#addCell").click(function() {
-		
-		force.charge(0);	// neutralize force charge
-		
-		var randomNode = nodes[Math.floor(Math.random()*nodes.length)];		// get random node, plug-in Niida-code here...
-		var randomAngle = Math.random()*Math.PI*2;
-		var x = Math.cos(randomAngle)*randomNode.radius + randomNode.x;
-		var y = Math.sin(randomAngle)*randomNode.radius + randomNode.y;
-		nodes.push({
-			radius:0, 
-			finalRadius:cellRadius(),
-			originalColor: varyColor(randomNode.originalColor),
-			x:x,
-			y:y,
-		});			// add new node next to parent node, random angle
-		
+		addSingleCell();
+	});
 	
-
-		
-		circles = inner.selectAll("circle")			// select
-			.data(nodes)							// rebind
-		
-		circles.enter()								// enter
-			.append("circle")
-				.attr("r", 0)
-				.attr("x", function(n) { return n.x; })
-				.attr("y", function(n) { return n.y; })
-				.attr("fill", function(n, i) { 
-				//	n.originalColor = colors[i]; 
-					return "#f00"; 
-				})
-				.transition()
-					.duration(2000)
-					.ease("cubic-in-out")		// match with interpolateNodeSize()
-					.attr("fill", function(n) {return n.originalColor})
-					.attr("r", function(n) { return n.finalRadius; })
-					.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
-	
-				;	// update visuals
-				
-		force.start();
-		
-	
+	$("#addManyCells").click(function() {
+		addCells(100);
 	});
 	
 	$("#resetCells").click(function() {
@@ -321,6 +287,88 @@ $(document).ready(function() {
 		zoomBehaviour(0);
 	});
 });	
+
+var addSingleCell = function() {
+	force.charge(0);	// neutralize force charge
+	
+	var randomNode = nodes[Math.floor(Math.random()*nodes.length)];		// get random node, plug-in Niida-code here...
+	var randomAngle = Math.random()*Math.PI*2;
+	var x = Math.cos(randomAngle)*randomNode.radius + randomNode.x;
+	var y = Math.sin(randomAngle)*randomNode.radius + randomNode.y;
+	nodes.push({
+		radius:0, 
+		finalRadius:cellRadius(),
+		originalColor: varyColor(randomNode.originalColor),
+		x:x,
+		y:y,
+	});			// add new node next to parent node, random angle
+	
+	circles = inner.selectAll("circle")			// select
+		.data(nodes)							// rebind
+	
+	circles.enter()								// enter
+		.append("circle")
+			.attr("r", 0)
+			.attr("x", function(n) { return n.x; })
+			.attr("y", function(n) { return n.y; })
+			.attr("fill", function(n, i) { 
+			//	n.originalColor = colors[i]; 
+				return "#f00"; 
+			})
+			.transition()
+				.duration(2000)
+				.ease("cubic-in-out")		// match with interpolateNodeSize()
+				.attr("fill", function(n) {return n.originalColor})
+				.attr("r", function(n) { return n.finalRadius; })
+				.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
+
+			;	// update visuals
+			
+	force.start();	
+}
+
+var addCells = function(nr) {
+	var count = 0;
+	var intervalID = window.setInterval(function() {
+		count++;
+		addSingleCell();
+		if (count>=nr) {
+			clearInterval(intervalID);
+		}
+	}, 200);	
+}
+
+
+
+var id = 1;
+var cellGraph = [{
+	id: 0,
+	type: 1,
+	time: new Date().getTime(),
+	children:[],
+}]
+
+console.time("graph");
+for (var i=0; i<100; i++) {
+	var r = Math.floor(Math.random()*cellGraph.length);
+	console.log(r);
+	var oldCell = cellGraph[r];
+	var newCell = Object.create(oldCell);
+	newCell.id = id++;
+	newCell.parent = oldCell;
+	newCell.children = [];
+	oldCell.children.push(newCell);
+	cellGraph.push(newCell);
+}
+console.timeEnd("graph");
+
+console.time("find children");
+for (var i=0; i<100; i++) {
+	if (cellGraph[i].children.length > 0) {
+		console.log(i, cellGraph[i].children.length, cellGraph[i].children);
+	}
+}
+console.timeEnd("find children");
 
  
 </script>
