@@ -82,19 +82,48 @@ var force = d3.layout.force()
  
 force.start();
 
-
-var lastZoomEvent = {'scale':1, 'translate':[0,0]};		// default zoom details
  
+
+/* - - - - - - - - -  Zoom - - - - - - - - -  */
+
 var zoom = d3.behavior.zoom()
-	.scaleExtent([0.05, 10])	// 1->100%
+	.scaleExtent([0.05, 10])	// 1=>100%
 	.on("zoom", zoomed);		// register zoom event
 
 function zoomed() {
-	lastZoomEvent.scale = d3.event.scale;			// cache zoom details
-	lastZoomEvent.translate = d3.event.translate;
-//	console.log(d3.event, "translate: " + d3.event.translate + ", scale:" + d3.event.scale);
 	inner.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
 }
+
+var zooming = false;
+var zoomBehaviour = function(scale) {
+	// Clicks on the zoom buttons during zoom tweens are being ignored
+	if (!zooming) {
+		zooming = true;
+		if (scale===0) {
+			var t = {'start':zoom.translate(), 'end':[0,0]},
+			s = {'start':zoom.scale(), 'end':1};
+		} else {
+			var t = {'start':zoom.translate(), 'end':[zoom.translate()[0]+(-scale*width/2), zoom.translate()[1]+(-scale*height/2)]},
+			s = {'start':zoom.scale(), 'end':zoom.scale()+scale};
+		}
+		var it = d3.interpolate(t.start, t.end),
+		is = d3.interpolate(s.start, s.end);
+		d3.transition()
+			.duration(750)
+			.tween("zoom", function() {
+				return function(tween) {
+					inner.attr("transform", "translate(" + it(tween) + ")scale(" + is(tween) + ")");
+				};
+			})
+			.each("end", function() {
+				zoom.scale(s.end).translate(t.end);		// match object zoom settings with visual settings
+				zooming = false;
+			});
+	}	
+}
+
+/* - - - - - - - - -  Zoom End - - - - - - - - -  */
+
 
 
 	
@@ -263,64 +292,18 @@ $(document).ready(function() {
 		console.log("reset");
 	});
 	
-	var zooming = false;
-	$("#zoomIn").click(function() {
-		console.log("zoom in");
-		if (!zooming) {
-			zooming = true;
-			endScale = zoom.scale()+1;
-			startTranslate = zoom.translate();
-			endTranslate = [startTranslate[0]-width/2, startTranslate[1]-height/2];
-			iTranslate = d3.interpolate(startTranslate, endTranslate);
-			iScale = d3.interpolate(zoom.scale(), endScale);
-			d3.transition()
-				.duration(750)
-				.tween("zoom", function() {
-					return function(t) {
-						inner.attr("transform", "translate(" + iTranslate(t) + ")scale(" + iScale(t) + ")");
-					};
-				})
-				.each("end", function() {
-					zoom.scale(endScale).translate(endTranslate);		// reset zoom behaviour
-					zooming = false;
-				});
-		}
 	
+	// Zoom Buttons
+	$("#zoomIn").click(function() {
+		zoomBehaviour(1);
 	});
 	
 	$("#zoomOut").click(function() {
-		console.log("zoom out");
-		endScale = zoom.scale()-1;
-		startTranslate = zoom.translate();
-		endTranslate = [startTranslate[0]+width/2, startTranslate[1]+height/2];
-		iTranslate = d3.interpolate(startTranslate, endTranslate);
-		iScale = d3.interpolate(zoom.scale(), endScale);
-		d3.transition()
-			.duration(750)
-			.tween("zoom", function() {
-				return function(t) {
-					inner.attr("transform", "translate(" + iTranslate(t) + ")scale(" + iScale(t) + ")");
-				};
-			})
-			.each("end", function() {
-				zoom.scale(endScale).translate(endTranslate);		// reset zoom behaviour
-			});
+		zoomBehaviour(-1);
 	});
 	
 	$("#zoomReset").click(function() {
-		console.log("zoom reset");
-		iTranslate = d3.interpolate(lastZoomEvent.translate, [0,0]);
-		iScale = d3.interpolate(lastZoomEvent.scale, 1);
-		d3.transition()
-			.duration(750)
-			.tween("zoom", function() {
-				return function(t) {
-					inner.attr("transform", "translate(" + iTranslate(t) + ")scale(" + iScale(t) + ")");
-				};
-			})
-			.each("end", function() {
-				zoom.scale(1).translate([0,0]);		// reset zoom behaviour
-			});
+		zoomBehaviour(0);
 	});
 });	
 
