@@ -45,7 +45,7 @@ Cell.prototype = {
 
 
 
-
+/*
 // Worker Test
 var worker = new Worker("js/worker.js");
 
@@ -59,7 +59,7 @@ worker.onmessage = function(e) {
 	console.log(e.data);
 	worker.terminate();
 }
-
+*/
 
 
 

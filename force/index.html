@@ -61,20 +61,29 @@ var cellRadius = function() {
 //	return 2;
 }
 
-// initial nodes
-var nodes = d3.range(6).map(function(i) { 
-		return {	radius: cellRadius(),
-					x: width/2 + (Math.floor(Math.random()*10-5)),
-					y: height/2 + (Math.floor(Math.random()*10-5)),
-				}; 
-	});
-
 
 /* - - - - - - - - -  Color - - - - - - - - -  */
 
-var colors = colorbrewer.Set1[6];		//  from Colorbrewer
+var getColor = colorbrewer.Set1[6];		//  from Colorbrewer
 
 /* - - - - - - - - -  Color End - - - - - - - - -  */
+
+// initial nodes
+var nodes = d3.range(6).map(function(i) { 
+		return {	
+					radius: cellRadius(),
+					x: width/2 + (Math.floor(Math.random()*10-5)),
+					y: height/2 + (Math.floor(Math.random()*10-5)),
+					index: i,
+					color: getColor[i],
+					children:[],
+					parent:false,		// root, no parents
+					alive: true,
+					died: undefined,		// timestep
+					born: 0,		// timestep
+				}; 
+	});
+
 
 var force = d3.layout.force()
 	.gravity(0.00)
@@ -146,15 +155,7 @@ inner.selectAll("circle")
 			.attr("r", function(d) { return d.radius; })
 			.attr("x", function(d) { return d.x; })
 			.attr("y", function(d) { return d.y; })
-			.attr("fill", function(d, i) {
-				d.originalColor = colors[i]; 	// store & set original color
-				return colors[i]; 
-			});
-
-
-
-
-	
+			.attr("fill", function(d) { return d.color; });
 /*
 .transition()				
 	.duration(function(d, i) { return 100*i})
@@ -288,37 +289,47 @@ $(document).ready(function() {
 	});
 });	
 
+var currentTime = 1234;
+
 var addSingleCell = function() {
 	force.charge(0);	// neutralize force charge
 	
-	var randomNode = nodes[Math.floor(Math.random()*nodes.length)];		// get random node, plug-in Niida-code here...
-	var randomAngle = Math.random()*Math.PI*2;
-	var x = Math.cos(randomAngle)*randomNode.radius + randomNode.x;
-	var y = Math.sin(randomAngle)*randomNode.radius + randomNode.y;
-	nodes.push({
+	var parentNode = nodes[Math.floor(Math.random()*nodes.length)];		// get random node, plug-in Niida-code here...
+	var randomAngle = Math.random()*Math.PI*2;							// in rad
+	var x = Math.cos(randomAngle)*parentNode.radius + parentNode.x;
+	var y = Math.sin(randomAngle)*parentNode.radius + parentNode.y;
+	var childNode = {
 		radius:0, 
 		finalRadius:cellRadius(),
-		originalColor: varyColor(randomNode.originalColor),
+		color:varyColor(parentNode.color),
 		x:x,
 		y:y,
-	});			// add new node next to parent node, random angle
+		angle:randomAngle,
+		parent:parentNode,
+		children:[],
+		alive: true,
+		died: undefined,		// timestep
+		born: currentTime,		// current timestep
+	}
+	parentNode.children.push(childNode);
+	nodes.push(childNode);					// add new node next to parent node, random angle
+	
+	
+	
 	
 	circles = inner.selectAll("circle")			// select
 		.data(nodes)							// rebind
 	
 	circles.enter()								// enter
 		.append("circle")
-			.attr("r", 0)
+			.attr("r", 0)									// initial radius
 			.attr("x", function(n) { return n.x; })
 			.attr("y", function(n) { return n.y; })
-			.attr("fill", function(n, i) { 
-			//	n.originalColor = colors[i]; 
-				return "#f00"; 
-			})
+			.attr("fill", function(n, i) { return "#f00"; })		// highlight color
 			.transition()
 				.duration(2000)
 				.ease("cubic-in-out")		// match with interpolateNodeSize()
-				.attr("fill", function(n) {return n.originalColor})
+				.attr("fill", function(n) {return n.color})
 				.attr("r", function(n) { return n.finalRadius; })
 				.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
 
@@ -339,19 +350,30 @@ var addCells = function(nr) {
 }
 
 
+// - - - - - - - - - - - - - - - - - - - - 
 
-var id = 1;
-var cellGraph = [{
-	id: 0,
-	type: 1,
-	time: new Date().getTime(),
-	children:[],
-}]
 
+
+// B.E.P Simulation Mdeol
+var id = 0;
+
+var rootCells = [
+{
+	color: "#e41a1c",
+	alive: true,
+	died: undefined,		// timestep
+	born: undefined,		// timestep
+	parent: false,			// no parent, root cell
+	children:[],			// pointers to children
+
+}
+]
+var cellGraph = [].concat(rootCells);
+
+/*
 console.time("graph");
-for (var i=0; i<100; i++) {
+for (var i=0; i<1000000; i++) {
 	var r = Math.floor(Math.random()*cellGraph.length);
-	console.log(r);
 	var oldCell = cellGraph[r];
 	var newCell = Object.create(oldCell);
 	newCell.id = id++;
@@ -362,13 +384,33 @@ for (var i=0; i<100; i++) {
 }
 console.timeEnd("graph");
 
+var mostChildren = 0;
+var cellWithMostChildren;
 console.time("find children");
-for (var i=0; i<100; i++) {
-	if (cellGraph[i].children.length > 0) {
-		console.log(i, cellGraph[i].children.length, cellGraph[i].children);
+for (var i=0; i<cellGraph.length; i++) {
+	var c = cellGraph[i].children.length
+	if (c > 0) {
+		if (c > mostChildren) {
+			mostChildren = c;
+			cellWithMostChildren = cellGraph[i];
+		//	console.log(i, "cellWithMostChildren", cellGraph[i].id);
+		}
+	//	console.log(i, cellGraph[i].children.length, cellGraph[i].children);
 	}
 }
 console.timeEnd("find children");
+
+var findRoot = function(id) {
+	
+	var cell = cellGraph[id];
+	while (cell.parent) {
+		console.log(cell.id);
+		cell = cell.parent;
+	}
+
+	return "found";
+}
+*/
 
  
 </script>

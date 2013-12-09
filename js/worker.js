@@ -10,7 +10,6 @@ var bep;
 
 onmessage = function(e) {
 	var message = e.data.message;
-	bep = e.data.bep:
-	
+	bep = e.data.bep;
 	postMessage(e.data.message);
 }
