@@ -27,20 +27,29 @@
 	</div>
 	<div class="row">
 		<div class="col-xs-2">
+		
+			<p>
+				<div class="btn-group">
+					<button type="button" class="btn btn-default btn-sm"id="startSimulation"><span class="glyphicon glyphicon-play"></span></button>
+					<button type="button" class="btn btn-default btn-sm"id="stopSimulation"><span class="glyphicon glyphicon-pause"></span></button>
+					<button type="button" class="btn btn-default btn-sm"id="resetSimulation">Reset</span></button>
+				</div>
+				Generation <span class="badge" id="timeStep">0</span>
+			</p>
+			<p>
+				<div class="btn-group">
+					<button type="button" class="btn btn-default btn-xs"id="zoomIn"><span class="glyphicon glyphicon-zoom-in"></span></button>
+					<button type="button" class="btn btn-default btn-xs"id="zoomOut"><span class="glyphicon glyphicon-zoom-out"></span></button>
+					<button type="button" class="btn btn-default btn-xs"id="zoomReset"><span class="glyphicon glyphicon-search"></span></button>
+				</div>
+			</p>
 			<p>
 				<button type="button" class="btn btn-default" id="addCell">Add Cell</button>
 			</p>
 			<p>
 				<button type="button" class="btn btn-default" id="addManyCells">Add 100 Cells</button>
 			</p>
-			<p>
-				<button type="button" class="btn btn-primary" id="resetCells">Reset</button>
-			</p>
-			<div class="btn-group">
-				<button type="button" class="btn btn-info btn-xs"id="zoomIn"><span class="glyphicon glyphicon-zoom-in"></span></button>
-				<button type="button" class="btn btn-info btn-xs"id="zoomOut"><span class="glyphicon glyphicon-zoom-out"></span></button>
-				<button type="button" class="btn btn-info btn-xs"id="zoomReset"><span class="glyphicon glyphicon-search"></span></button>
-			</div>
+		
 		</div>
 		<div class="col-xs-10" id="cells"></div>
 	</div>
@@ -55,11 +64,8 @@
 var width = 800,
     height = 500;
 
-// define cell size
-var cellRadius = function() {
-	return Math.floor(Math.random() * 5 + 10);
-//	return 2;
-}
+var currentTime = 0;
+
 
 
 /* - - - - - - - - -  Color - - - - - - - - -  */
@@ -68,21 +74,52 @@ var getColor = colorbrewer.Set1[6];		//  from Colorbrewer
 
 /* - - - - - - - - -  Color End - - - - - - - - -  */
 
+
+
+/* - - - - - - - - -  Settings - - - - - - - - -  */
+var settings = {
+	n: 100,				// number of genes
+//	g: ,				// genome, length n
+	p0: 0.001,			// initial replication probability
+	q0: 0.0000001,		// death probabiliy
+	r: 0.01, 			// mutation probabiliy of each gene when replicated
+	d: 10, 				// number of driver genes, first d genes of g
+};
+/* - - - - - - - - -  Settings End - - - - - - - - -  */
+
+
+
+/* - - - - - - - - -  Create Node - - - - - - - - -  */
+// define cell size
+var cellRadius = function() {
+	return Math.floor(Math.random() * 5 + 10);
+}
+var createNode = function() {
+	return {	
+		radius: cellRadius(),
+		x: width/2 + (Math.floor(Math.random()*10-5)),
+		y: height/2 + (Math.floor(Math.random()*10-5)),
+		color: d3.rgb("#000000"),
+		children:[],
+		parent:false,		// root, no parents
+		alive: true,
+		died: undefined,		// timestep
+		born: currentTime,		// timestep
+		driverGenes: d3.range(settings.d).map(function(i) { return false; }),			// false -> not mutated
+		genes: d3.range(settings.n-settings.d).map(function(i) { return false; }),		// false -> not mutated
+	};
+}
+
+/* - - - - - - - - -  Create Node End - - - - - - - - -  */
+
 // initial nodes
 var nodes = d3.range(6).map(function(i) { 
-		return {	
-					radius: cellRadius(),
-					x: width/2 + (Math.floor(Math.random()*10-5)),
-					y: height/2 + (Math.floor(Math.random()*10-5)),
-					index: i,
-					color: getColor[i],
-					children:[],
-					parent:false,		// root, no parents
-					alive: true,
-					died: undefined,		// timestep
-					born: 0,		// timestep
-				}; 
-	});
+	var node = createNode();
+	node.index = i;
+	node.color = d3.rgb(getColor[i]);
+	node.born = currentTime;
+	return node;
+});
 
 
 var force = d3.layout.force()
@@ -91,9 +128,8 @@ var force = d3.layout.force()
 	.charge(2000)
 	.friction(0.2)
 	.nodes(nodes)
-	.size([width, height]);
- 
-force.start();
+	.size([width, height])
+	.start();
 
  
 
@@ -164,10 +200,13 @@ force.on("tick", function(e) {
 	var q = d3.geom.quadtree(nodes),
 	i = 0,
 	n = nodes.length;
-	while (++i < n) q.visit(collide(nodes[i]));
+	// while (++i < n) q.visit(collide(nodes[i]));
+	for(i=0;i<n;i++) {
+		q.visit(collide(nodes[i]));
+	}
 	inner.selectAll("circle")
-		.attr("cx", function(d) { return d.x; })
-		.attr("cy", function(d) { return d.y; });
+		.attr("cx", function(n) { return n.x; })
+		.attr("cy", function(n) { return n.y; });
 });
  
 /*
@@ -241,7 +280,8 @@ var interpolateNodeSize = function(node, easeMode) {
 	var duration = 2000;
 	var timer = d3.timer(function(t){
 		if (t>duration) {
-			node.radius = node.finalRadius;	// make sure the radius become the original radius
+			node.radius = node.finalRadius;		// make sure the radius become the original radius
+			delete node.finalRadius;			// remove finalRadius property
 			return true; // true ends timer
 		}
 		node.radius = interpol(ease(t/duration));
@@ -251,11 +291,11 @@ var interpolateNodeSize = function(node, easeMode) {
 
 
 
-var varyColor = function(c) {
+var varyColor = function(color) {
 	if (Math.random()*-0,5 > 0) {
-		return d3.rgb(c).darker(0.2);
+		return color.darker(0.2);
 	} else {
-		return d3.rgb(c).lighter(0.2);
+		return color.lighter(0.2);
 	}
 }
 
@@ -263,11 +303,11 @@ $(document).ready(function() {
 
 	
 	$("#addCell").click(function() {
-		addSingleCell();
+		addRandomCells(1);
 	});
 	
 	$("#addManyCells").click(function() {
-		addCells(100);
+		addRandomCells(100);
 	});
 	
 	$("#resetCells").click(function() {
@@ -289,34 +329,17 @@ $(document).ready(function() {
 	});
 });	
 
-var currentTime = 1234;
 
-var addSingleCell = function() {
-	force.charge(0);	// neutralize force charge
+var addNewCells = function(newCells) {
+	console.log("newCells.length", newCells.length);
 	
-	var parentNode = nodes[Math.floor(Math.random()*nodes.length)];		// get random node, plug-in Niida-code here...
-	var randomAngle = Math.random()*Math.PI*2;							// in rad
-	var x = Math.cos(randomAngle)*parentNode.radius + parentNode.x;
-	var y = Math.sin(randomAngle)*parentNode.radius + parentNode.y;
-	var childNode = {
-		radius:0, 
-		finalRadius:cellRadius(),
-		color:varyColor(parentNode.color),
-		x:x,
-		y:y,
-		angle:randomAngle,
-		parent:parentNode,
-		children:[],
-		alive: true,
-		died: undefined,		// timestep
-		born: currentTime,		// current timestep
+	// add new cells one by one
+	for (var i=0; i<newCells.length; i++) {
+		nodes.push(newCells[i]);	
 	}
-	parentNode.children.push(childNode);
-	nodes.push(childNode);					// add new node next to parent node, random angle
 	
-	
-	
-	
+	force.charge(0);	// neutralize force charge
+
 	circles = inner.selectAll("circle")			// select
 		.data(nodes)							// rebind
 	
@@ -332,17 +355,28 @@ var addSingleCell = function() {
 				.attr("fill", function(n) {return n.color})
 				.attr("r", function(n) { return n.finalRadius; })
 				.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
-
 			;	// update visuals
 			
 	force.start();	
 }
 
-var addCells = function(nr) {
+
+var addSingleCell = function(nr) {
+	
+	var randomParentCell = nodes[Math.floor(Math.random()*nodes.length)];
+	var newCell = createNewCell(randomParentCell);
+	addNewCells([newCell]);
+}
+
+
+var addRandomCells = function(nr) {
 	var count = 0;
 	var intervalID = window.setInterval(function() {
 		count++;
-		addSingleCell();
+		var randomParentCell = nodes[Math.floor(Math.random()*nodes.length)];
+		var newCell = createNewCell(randomParentCell);
+		addNewCells([newCell]);
+		
 		if (count>=nr) {
 			clearInterval(intervalID);
 		}
@@ -354,63 +388,171 @@ var addCells = function(nr) {
 
 
 
-// B.E.P Simulation Mdeol
-var id = 0;
+// B.E.P Simulation Model
 
-var rootCells = [
-{
-	color: "#e41a1c",
-	alive: true,
-	died: undefined,		// timestep
-	born: undefined,		// timestep
-	parent: false,			// no parent, root cell
-	children:[],			// pointers to children
 
+
+
+
+var playSimulation = function(steps) {
+	console.time("simulate");
+	var newCells = [];
+	for (var i=0; i<steps; i++) {
+		newCells = newCells.concat(simulate());
+	}
+	
+	console.timeEnd("simulate");
+	console.log(newCells);
+	addNewCells(newCells);
 }
-]
-var cellGraph = [].concat(rootCells);
 
 /*
-console.time("graph");
-for (var i=0; i<1000000; i++) {
-	var r = Math.floor(Math.random()*cellGraph.length);
-	var oldCell = cellGraph[r];
-	var newCell = Object.create(oldCell);
-	newCell.id = id++;
-	newCell.parent = oldCell;
-	newCell.children = [];
-	oldCell.children.push(newCell);
-	cellGraph.push(newCell);
-}
-console.timeEnd("graph");
+var settings = {
+	n: 100,				// number of genes
+//	g: ,				// genome, length n
+	p0: 0.001,			// initial replication probability
+	q0: 0.0000001,		// death probabiliy
+	r: 0.01, 			// mutation probabiliy of each gene when replicated
+	d: 10, 				// number of driver genes, first d genes of g
+};
 
-var mostChildren = 0;
-var cellWithMostChildren;
-console.time("find children");
-for (var i=0; i<cellGraph.length; i++) {
-	var c = cellGraph[i].children.length
-	if (c > 0) {
-		if (c > mostChildren) {
-			mostChildren = c;
-			cellWithMostChildren = cellGraph[i];
-		//	console.log(i, "cellWithMostChildren", cellGraph[i].id);
+*/
+
+
+var simulate = function() {
+	var newCells = [];
+	var cell;
+	for (var i=0; i<nodes.length; i++) {		// loop over cells
+		cell = nodes[i];
+	
+		if (Math.random() < settings.q0) {						// die
+			// update alive status
+			// time of death
+			// remove from display
+			console.log("cell " + i + " died.");
+			continue;
 		}
-	//	console.log(i, cellGraph[i].children.length, cellGraph[i].children);
+		
+		
+		if (Math.random() < settings.p0) {						// replicate
+			
+			// create new node
+			try {
+				var childCell = createNewCell(cell);
+				newCells.push(childCell);
+				
+				console.log("time", currentTime);
+				
+			} catch(e){
+				console.log("caught error", e);
+			}
+		}
 	}
+	currentTime++;			// advance time
+	return newCells;
 }
-console.timeEnd("find children");
+
+var createNewCell = function(cell) {
+	// create child node and update its properties
+	console.log("creating new cell");
+	var randomAngle = Math.random()*Math.PI*2;							// in rad
+	var childCell = createNode();
+	childCell.radius = 0;												// update child node
+	childCell.finalRadius = cellRadius();
+	childCell.color = varyColor(cell.color);
+	childCell.x = Math.cos(randomAngle)*cell.radius + cell.x;			// rad
+	childCell.y = Math.sin(randomAngle)*cell.radius + cell.y;	
+	childCell.angle = randomAngle;
+	childCell.parent = cell;
+	childCell.genes = cell.genes.slice(0);					// copy genes
+	childCell.driverGenes = cell.driverGenes.slice(0);		// copy driver genes
+	cell.children.push(childCell);
+
+	for (var j=0; j<childCell.genes.length; j++) {
+		if (!childCell.genes[j]) {		// not mutated
+			if (Math.random() < settings.r) {				// mutation probabiliy of each gene when replicated
+				childCell.genes[j] = true;					// mutated
+			}
+		}
+	}
+	for (var k=0; k<childCell.driverGenes.length; k++) {
+		if (!childCell.genes[k]) {		// not mutated
+			if (Math.random() < settings.r) {				// mutation probabiliy of each gene when replicated
+				childCell.genes[k] = true;					// mutated
+			}
+		}
+	}
+	return childCell;
+}
+
+
+var pauseSimulation = function() {
+	
+}
+
+var resetSimulation = function() {
+	currentTime = 0;
+}
+
+
+
+
+
+
+
+
+var findNodeWithChildren = function() {
+	var mostChildren = 0;
+	var cellWithMostChildren;
+	console.time("find children");
+	for (var i=0; i<nodes.length; i++) {
+		var c = nodes[i].children.length
+		if (c > 0) {
+			if (c > mostChildren) {
+				mostChildren = c;
+				cellWithMostChildren = nodes[i];
+			//	console.log(i, "cellWithMostChildren", cellGraph[i].id);
+			}
+		//	console.log(i, cellGraph[i].children.length, cellGraph[i].children);
+		}
+	}
+	console.log(cellWithMostChildren, c);
+	console.timeEnd("find children");	
+}
+
 
 var findRoot = function(id) {
-	
-	var cell = cellGraph[id];
+	console.time("find root");
+	var cell = nodes[id];
 	while (cell.parent) {
-		console.log(cell.id);
+		console.log(cell.index);
 		cell = cell.parent;
 	}
-
-	return "found";
+	console.log("root: " + cell.index, cell);
+	console.timeEnd("find root");
 }
-*/
+
+
+
+/* - - - - - - - - - Worker - - - - - - - - - */
+
+var worker = new Worker("../js/worker.js");
+
+console.time("worker");
+
+var bep = {a:1, b:2};
+
+//worker.postMessage({'message':'play', 'bep':bep});
+
+worker.onmessage = function(e) {
+	console.timeEnd("worker", self, worker);
+	console.log("data",e.data);
+//	worker.terminate();
+}
+
+/* - - - - - - - - - Worker End - - - - - - - - - */
+
+
 
  
 </script>
