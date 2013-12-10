@@ -3,13 +3,31 @@
 importScripts('science.v1.min.js');
 importScripts('underscore-min.js');
 importScripts('underscore-mixins.js');
-importScripts('colorbrewer/colorbrewer.js');
+importScripts('colorbrewer.js');
 
 // Worker's copy of global bep object
-var bep;
+var cells = [];
+var newCells = [];
+var running = false;
+var time = 0;
+
+
+
 
 onmessage = function(e) {
-	var message = e.data.message;
-	bep = e.data.bep;
-	postMessage(e.data.message);
+	if (e.message == "play") {
+		running = true;
+		postMessage("started");
+	} else if (e.message == "pause") {
+		running = false;
+		postMessage("paused");
+	} else {
+		//	var message = e.data.cell;
+		//	bep = e.data.bep;
+			var newCell = Math.random();
+			cells.push(newCell);
+			postMessage(cells);
+	}
+	
+
 }
