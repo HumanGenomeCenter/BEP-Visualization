@@ -30,9 +30,10 @@
 		
 			<p>
 				<div class="btn-group">
-					<button type="button" class="btn btn-default btn-sm"id="startSimulation"><span class="glyphicon glyphicon-play"></span></button>
-					<button type="button" class="btn btn-default btn-sm"id="stopSimulation"><span class="glyphicon glyphicon-pause"></span></button>
+					<button type="button" class="btn btn-default btn-sm"id="playSimulation"><span class="glyphicon glyphicon-play"></span></button>
+					<button type="button" class="btn btn-default btn-sm"id="pauseSimulation"><span class="glyphicon glyphicon-pause"></span></button>
 					<button type="button" class="btn btn-default btn-sm"id="resetSimulation">Reset</span></button>
+					<button type="button" class="btn btn-default btn-sm"id="getSimulationData">Get</span></button>
 				</div>
 				Generation <span class="badge" id="timeStep">0</span>
 			</p>
@@ -301,7 +302,27 @@ var varyColor = function(color) {
 
 $(document).ready(function() {
 
+
+	$("#playSimulation").click(function() {
+		worker.postMessage({'message':'play'});
+	});
 	
+	$("#pauseSimulation").click(function() {
+		worker.postMessage({'message':'pause'});
+	});
+	
+	$("#resetSimulation").click(function() {
+		worker.postMessage({'message':'reset'});
+	});
+	
+	$("#getSimulationData").click(function() {
+		worker.postMessage({'message':'get', 'amount':200});
+	});
+	
+	
+   
+
+
 	$("#addCell").click(function() {
 		addRandomCells(1);
 	});
@@ -310,9 +331,15 @@ $(document).ready(function() {
 		addRandomCells(100);
 	});
 	
+	
 	$("#resetCells").click(function() {
 		console.log("reset");
 	});
+	
+	
+	
+	
+	
 	
 	
 	// Zoom Buttons
@@ -394,17 +421,6 @@ var addRandomCells = function(nr) {
 
 
 
-var playSimulation = function(steps) {
-	console.time("simulate");
-	var newCells = [];
-	for (var i=0; i<steps; i++) {
-		newCells = newCells.concat(simulate());
-	}
-	
-	console.timeEnd("simulate");
-	console.log(newCells);
-	addNewCells(newCells);
-}
 
 /*
 var settings = {
@@ -486,13 +502,6 @@ var createNewCell = function(cell) {
 }
 
 
-var pauseSimulation = function() {
-	
-}
-
-var resetSimulation = function() {
-	currentTime = 0;
-}
 
 
 
@@ -536,17 +545,12 @@ var findRoot = function(id) {
 
 /* - - - - - - - - - Worker - - - - - - - - - */
 
-var worker = new Worker("../js/worker.js");
-
-console.time("worker");
-
-var bep = {a:1, b:2};
+var worker = new Worker("../js/worker.js");			// init
 
 //worker.postMessage({'message':'play', 'bep':bep});
 
 worker.onmessage = function(e) {
-	console.timeEnd("worker", self, worker);
-	console.log("data",e.data);
+	console.log("worker response: ", JSON.parse(e.data) );
 //	worker.terminate();
 }
 
