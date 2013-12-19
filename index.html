@@ -1,110 +1,427 @@
 <!DOCTYPE html>
-<html>
-	<head>
-		<title>BEP Cancer Subtype Simulator</title>
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
-		<link href="css/bep.css" rel="stylesheet" media="screen">
-	</head>
-	<body>
-		<div class="container">
-			<div class="page-header">
-				<h1>BEP Cancer Subtype Simulator <small>v1.0</small></h1>
-			</div>
-		
-			<div class="row">
-				<div class="span5 controls">
-					<div class="row">
-						<div class="span2">maxBinary</div>
-						<div class="span2"><input id="maxBinary" type="range" min="5" max="63" value="63"></div>
-						<div class="span1" id="maxBinary_label">63</div>
-					</div>
-					<div class="row">
-						<div class="span2">mutationRate</div>
-						<div class="span2"><input id="mutationRate" type="range" min="0" max="100" value="10"></div>
-						<div class="span1" id="mutationRate_label">0.1</div>
-					</div>
-					<div class="row">
-						<div class="span2">growthRate</div>
-						<div class="span2"><input id="growthRate" type="range" min="0" max="100" value="10"></div>
-						<div class="span1" id="growthRate_label">0.1</div>
-					</div>
-					<div class="row">
-						<div class="span2">deathRate</div>
-						<div class="span2"><input id="deathRate" type="range" min="1" max="1000" value="10"></div>
-						<div class="span1" id="deathRate_label">0.0000001</div>
-					</div>
-					<div class="row">
-						<div class="span2">deathRateForNonStem</div>
-						<div class="span2"><input id="deathRateForNonStem" type="range" min="0" max="1000" value="10"></div>
-						<div class="span1" id="deathRateForNonStem_label">0.01</div>
-					</div>
-					<div class="row">
-						<div class="span2">symmetricReplicationP</div>
-						<div class="span2"><input id="symmetricReplicationProbablity" type="range" min="0" max="1000" value="100"></div>
-						<div class="span1" id="symmetricReplicationProbablity_label">0.1</div>
-					</div>
-					<div class="row">
-						<div class="span2">maxTime</div>
-						<div class="span2"><input id="maxTime" type="range" min="100000" max="10000000" value="5000000"></div>
-						<div class="span1" id="maxTime_label">5000000</div>
-					</div>
-					<div class="row">
-						<div class="span2">maxPopulationSize</div>
-						<div class="span2"><input id="maxPopulationSize" type="range" min="100" max="5000" value="100"></div>
-						<div class="span1" id="maxPopulationSize_label">300</div>
-					</div>
-					<div class="row">
-						<div class="span2">genomeSize</div>
-						<div class="span2"><input id="genomeSize" type="range" min="100" max="1000" value="300"></div>
-						<div class="span1" id="genomeSize_label">300</div>
-					</div>
-					<div class="row">
-						<div class="span2">driverSize</div>
-						<div class="span2"><input id="driverSize" type="range" min="5" max="20" value="10"></div>
-						<div class="span1" id="driverSize_label">10</div>
-					</div>
-					<div class="row">
-						<div class="span2">essensialGeneSize</div>
-						<div class="span2"><input id="essensialGeneSize" type="range" min="0" max="20" value="0"></div>
-						<div class="span1" id="essensialGeneSize_label">0</div>
-					</div>
-					<div class="row">
-						<div class="span2">fitnessIncrease</div>
-						<div class="span2"><input id="fitnessIncrease" type="range" min="1" max="20" value="5"></div>
-						<div class="span1" id="fitnessIncrease_label">5</div>
-					</div>
-					<div class="row">
-						<div class="span2">initialPopulationSize</div>
-						<div class="span2"><input id="initialPopulationSize" type="range" min="1" max="20" value="10"></div>
-						<div class="span1" id="initialPopulationSize_label">10</div>
-					</div>
-					
-					<div class="row">
-						<div class="span5">
-							<br />
-							<br />
-							<button class="btn btn-large btn-info" type="button" id="startSimulation">Start Simulation</button>
+<head>
+	<meta charset="utf-8">
+	<title>BEP Force</title>
+	<link rel="stylesheet" href="./css/bootstrap.css" charset="utf-8">
+	<style type="text/css" media="screen">
+		body {
+			background: #eee;
+			margin: 0 auto;
+		}
+		.container {
+		 /* margin: 0 auto; */
+		  width: 970px !important;
+		}
+		svg {
+			background: #fff;
+		}
+	</style>
+	
+</head>
 
-						</div>
-					</div>
-					
+<body>
+	
+<div class="container">
+	<div class="page-header">
+	  <h1>B.E.P Simulator <small>Cancer-subtype Simulation</small></h1>
+	</div>
+	<div class="row">
+		<div class="col-xs-2">
+		
+			<p>
+				<div class="btn-group">
+					<button type="button" class="btn btn-default btn-sm"id="playSimulation"><span class="glyphicon glyphicon-play"></span></button>
+					<button type="button" class="btn btn-default btn-sm"id="pauseSimulation"><span class="glyphicon glyphicon-pause"></span></button>
+					<button type="button" class="btn btn-default btn-sm"id="resetSimulation">Reset</span></button>
+					<button type="button" class="btn btn-default btn-sm"id="getSimulationData">Get</span></button>
 				</div>
-				<div class="span7 simulation">
-					<canvas id="sim" width="540" height="540" ></canvas>
+				Generation <span class="badge" id="timeStep">0</span>
+			</p>
+			<p>
+				<div class="btn-group">
+					<button type="button" class="btn btn-default btn-xs"id="zoomIn"><span class="glyphicon glyphicon-zoom-in"></span></button>
+					<button type="button" class="btn btn-default btn-xs"id="zoomOut"><span class="glyphicon glyphicon-zoom-out"></span></button>
+					<button type="button" class="btn btn-default btn-xs"id="zoomReset"><span class="glyphicon glyphicon-search"></span></button>
 				</div>
-			</div>
+			</p>
+			<p>
+				<button type="button" class="btn btn-default" id="addCell">Add Cell</button>
+			</p>
+			<p>
+				<button type="button" class="btn btn-default" id="addManyCells">Add 100 Cells</button>
+			</p>
+		
 		</div>
-		<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
-		<script src="js/jquery-2.0.3.min.js"></script>
-		<script src="js/underscore-min.js"></script>
-		<script src="js/underscore-mixins.js"></script>
-		<script src="js/science.v1.min.js"></script>
-		<script src="js/d3.min.js"></script>
-		<script src="js/colorbrewer.js"></script>
-		<script src="js/ui.js"></script> 
-		<script src="js/bep.js"></script>
-		<!-- Include all compiled plugins (below), or include individual files as needed -->
-		<!-- <script src="js/bootstrap.min.js"></script> -->
-	</body>
-</html>
+		<div class="col-xs-10" id="cells"></div>
+	</div>
+</div>
+<script src="./js/d3.min.js"></script>
+<script src="./js/queue.min.js"></script>
+<script src="./js/jquery-2.0.3.min.js"></script>
+<script src="./js/colorbrewer.js"></script>
+<script>
+
+// https://gist.github.com/mbostock/3231307
+
+var width = 800,
+    height = 500;
+
+
+
+/* - - - - - - - - -  Color - - - - - - - - -  */
+
+var initColor = function(nr) {
+	return colorbrewer.Set3[nr];		//  from Colorbrewer
+}
+var getColor;
+
+/* - - - - - - - - -  Color End - - - - - - - - -  */
+
+
+
+/* - - - - - - - - -  Settings - - - - - - - - -  */
+var settings = {
+	n: 100,				// number of genes
+//	g: ,				// genome, length n
+	p0: 0.001,			// initial replication probability
+	q0: 0.0000001,		// death probabiliy
+	r: 0.01, 			// mutation probabiliy of each gene when replicated
+	d: 10, 				// number of driver genes, first d genes of g
+	maxNumberOfCells: 100000,
+	initialNodes: 10,
+};
+/* - - - - - - - - -  Settings End - - - - - - - - -  */
+
+
+
+// initial nodes
+var nodes = [];
+
+var force = d3.layout.force()
+	.gravity(0.00)
+ 	.charge(function(d, i) { return i ? 0 : -2000; })
+	.charge(-2000)
+	.friction(0.2)
+	.nodes(nodes)
+	.size([width, height])
+	.stop();
+	
+
+
+/* - - - - - - - - -  Zoom - - - - - - - - -  */
+
+var zoom = d3.behavior.zoom()
+	.scaleExtent([0.05, 10])	// 1=>100%
+	.on("zoom", zoomed);		// register zoom event
+
+function zoomed() {
+	inner.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
+}
+
+var zooming = false;
+var zoomBehaviour = function(scale) {
+	// Clicks on the zoom buttons during zoom tweens are being ignored
+	if (!zooming) {
+		zooming = true;
+		if (scale===0) {
+			var t = {'start':zoom.translate(), 'end':[0,0]},
+			s = {'start':zoom.scale(), 'end':1};
+		} else {
+			var t = {'start':zoom.translate(), 'end':[zoom.translate()[0]+(-scale*width/2), zoom.translate()[1]+(-scale*height/2)]},
+			s = {'start':zoom.scale(), 'end':zoom.scale()+scale};
+		}
+		var it = d3.interpolate(t.start, t.end),
+		is = d3.interpolate(s.start, s.end);
+		d3.transition()
+			.duration(750)
+			.tween("zoom", function() {
+				return function(tween) {
+					inner.attr("transform", "translate(" + it(tween) + ")scale(" + is(tween) + ")");
+				};
+			})
+			.each("end", function() {
+				zoom.scale(s.end).translate(t.end);		// match object zoom settings with visual settings
+				zooming = false;
+			});
+	}	
+}
+
+/* - - - - - - - - -  Zoom End - - - - - - - - -  */
+
+
+
+	
+var inner = d3.select("div#cells").append("svg")
+		.attr("width", width)
+		.attr("height", height)
+		.call(zoom)
+	.append("g")
+ 		.attr("id", "inner");
+	
+
+inner.selectAll("circle")
+	.data(nodes)
+	.enter()
+		.append("circle")
+			.attr("r", function(d) { return d.radius; })
+			.attr("x", function(d) { return d.x; })
+			.attr("y", function(d) { return d.y; })
+			.attr("fill", function(d) { return d.color; });
+
+
+force.on("tick", function(e) {
+	var q = d3.geom.quadtree(nodes),
+	i = 0,
+	n = nodes.length;
+	// while (++i < n) q.visit(collide(nodes[i]));
+	for(i=0;i<n;i++) {
+		q.visit(collide(nodes[i]));
+	}
+	inner.selectAll("circle")
+		.attr("cx", function(n) { return n.x; })
+		.attr("cy", function(n) { return n.y; });
+});
+ 
+/*
+var dragging = false;
+var circleElement;
+svg.selectAll("circle").on("mousedown", function(circle) {
+	console.log(circle);
+	root = circle;
+	root.fixed = true;
+	root.color = this.style["fill"];				// temp save node color
+	this.style["fill"] = "f00";						// highlight node	
+	circleElement = this;							// save handler for circle svg	
+	dragging = true;
+});
+
+svg.on("mousemove", function() {
+	if (dragging) {
+		var p1 = d3.mouse(this);
+		root.px = p1[0];
+		root.py = p1[1];
+	}
+
+});
+
+svg.on("mouseup", function() {
+	if (dragging) {
+		dragging = false;
+		delete root.fixed;
+		circleElement.style["fill"] = root.color;		// restore color
+		delete root.color;
+		force.resume();
+	}
+});
+*/
+
+function collide(node) {
+
+	var r = node.radius,	
+	nx1 = node.x - 2*r,
+	nx2 = node.x + 2*r,
+	ny1 = node.y - 2*r,
+	ny2 = node.y + 2*r;
+
+	return function(quad, x1, y1, x2, y2) {
+		if (quad.point && (quad.point !== node)) {
+			var x = node.x - quad.point.x,
+			y = node.y - quad.point.y,
+			l = Math.sqrt(x * x + y * y),
+			r = node.radius + quad.point.radius;
+			if (l < r) {
+				l = (l - r) / l * .5;
+				node.x -= x *= l;
+				node.y -= y *= l;
+				quad.point.x += x;
+				quad.point.y += y;
+			}
+		}
+		return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
+	};
+}
+
+
+
+
+// Interactions
+
+var interpolateNodeSize = function(node, easeMode) {
+	if (node.radius === node.finalRadius) return;
+	var interpol = d3.interpolateNumber(node.radius, node.finalRadius);
+	var ease= d3.ease(easeMode);
+	var duration = 2000;
+	var timer = d3.timer(function(t){
+		if (t>duration) {
+			node.radius = node.finalRadius;		// make sure the radius become the original radius
+			delete node.finalRadius;			// remove finalRadius property
+			return true; // true ends timer
+		}
+		node.radius = interpol(ease(t/duration));
+	});	
+}
+
+
+
+
+var varyColor = function(color) {
+	if (Math.random()*-0,5 > 0) {
+		return color.darker(0.1);
+	} else {
+		return color.lighter(0.1);
+	}
+}
+
+$(document).ready(function() {
+
+
+	$("#playSimulation").click(function() {
+		console.log("play");
+	});
+	
+	$("#pauseSimulation").click(function() {
+		console.log("pause");
+	});
+	
+	$("#resetSimulation").click(function() {
+		console.log("reset");
+	});
+	
+	$("#getSimulationData").click(function() {
+		worker.postMessage(JSON.stringify({'message':'get', 'start':0, 'end':1000}));
+	});
+	
+	$("#addCell").click(function() {
+		addRandomCells(1);
+	});
+	
+	$("#addManyCells").click(function() {
+		addRandomCells(100);
+	});
+	
+	
+	$("#resetCells").click(function() {
+		console.log("reset");
+	});
+	
+	
+	
+	
+	
+	
+	
+	// Zoom Buttons
+	$("#zoomIn").click(function() {
+		zoomBehaviour(1);
+	});
+	
+	$("#zoomOut").click(function() {
+		zoomBehaviour(-1);
+	});
+	
+	$("#zoomReset").click(function() {
+		zoomBehaviour(0);
+	});
+});	
+
+
+var addNewCells = function(newCells) {
+	console.log("newCell");
+	
+	// add new cells one by one
+	for (var i=0; i<newCells.length; i++) {
+		nodes.push(newCells[i]);
+	}
+		
+	force.charge(500);
+	
+	force.nodes(nodes);
+	
+	circles = inner.selectAll("circle")			// select
+		.data(nodes)							// rebind
+	
+	circles.enter()								// enter
+		.append("circle")
+			.attr("r", 0)									// initial radius
+			.attr("x", function(n) { return n.x; })
+			.attr("y", function(n) { return n.y; })
+			.attr("fill", function(n) {return n.color})
+			.transition()
+				.duration(1000)
+				.ease("cubic-in-out")		// match with interpolateNodeSize()
+				.attr("r", function(n) { return n.finalRadius; })
+				.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
+			;	// update visuals
+			
+	force.start();	
+	
+}
+
+
+var addSingleCell = function(nr) {
+	
+}
+
+
+/*
+var addRandomCells = function(newCells) {
+	
+	//force.nodes(newCells);
+	var i = 0;
+	var intervalID = window.setInterval(function() {
+		addNewCell(newCells[i]);
+		i++;
+		if (i>=newCells.length) {
+			clearInterval(intervalID);
+		}
+	}, 300);
+	
+	
+}
+
+*/
+
+/* - - - - - - - - - Worker - - - - - - - - - */
+
+var worker = new Worker("./js/worker.js");			// init
+
+
+worker.onmessage = function(e) {
+	var data = JSON.parse(e.data);
+	
+	
+	if (data.message==='initialCells') {
+		console.log("worker response: initialCells", data);
+		
+	//	inner.data([]).exit().remove();
+		initialCells = data.initialCells;
+		
+		getColor = initColor(initialCells.length);
+		for (var i=0; i<initialCells.length; i++) {
+			initialCells[i].color = getColor[i];
+			initialCells[i].x = width/2 + (Math.floor(Math.random()*10-5));
+			initialCells[i].y = height/2 + (Math.floor(Math.random()*10-5));
+		}
+		
+		nodes = [];
+		
+		console.log(initialCells);
+		addNewCells(initialCells);
+
+	}
+	
+}
+
+
+worker.postMessage(JSON.stringify({'message':'getInitialCells', 'settings':settings}));
+
+/* - - - - - - - - - Worker End - - - - - - - - - */
+
+
+
+
+
+
+
+ 
+</script>
