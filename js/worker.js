@@ -88,7 +88,7 @@ onmessage = function(e) {
 	if (e.data.message === "play") {
 		console.log("worker: play");
 		running = true;
-		simulate(1000);
+		simulate({maxNumberOfCells:10000});
 		postMessage( JSON.stringify({"cells":cells}) );
 		
 	} else if (e.data.message === "pause") {
@@ -120,12 +120,13 @@ onmessage = function(e) {
 
 
 
-var simulate = function(steps) {
+var simulate = function(options) {
 
+	console.time("simulate");
 	
-	
-	for (var a=0; a<steps; a++) {
-		if (running===false) break;		// break when status changes
+	while(true) {
+		
+	//	if (time > 10000) return;		// break when status changes
 
 		var cell, i;
 		var length = cells.length;	
@@ -145,19 +146,63 @@ var simulate = function(steps) {
 				var parent = cells[i];
 				var child = new Cell(parent);
 				cells.push(child);
-				
-				if (cell.length % 1000 === 0) {
-					console.log(cell.length, time);
-				}
-				
+					
 			}
+			
+			if (cells.length > options.maxNumberOfCells) {
+				console.log(cells.length, time);
+				console.timeEnd("simulate");
+				return;	// done
+			}
+			
+			
 		}
 		time++;			// advance time
 
 	}
+	
+	
 
 }
 
+
+var findRoot = function(id) {
+	console.time("find root");
+	var rootPath = [];
+	var cell = cells[id];
+	console.log("parent", cell.parent);
+	
+	while (cell.parent) {
+		cell = cells[cell.parent];
+		rootPath.unshift(cell.index);
+	}
+	console.log("root: " + cell.index, cell);
+	
+	console.timeEnd("find root");
+	return rootPath;
+}
+
+
+
+var findChildren = function(id) {
+	// brute force
+	
+	var childPath = [];
+	
+	var parentCell = cells[id];
+
+
+	for (var i=id; i<cells.length; i++) {
+		var childCell = cells[i];
+		if (childCell.parent === parentCell.index) {
+			childPath.push(childCell.index);
+			childPath.push(findChildren());
+		}
+	}
+	
+	console.log(childPath);
+	return childPath;
+}
 
 
 

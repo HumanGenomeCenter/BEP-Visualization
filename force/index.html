@@ -358,7 +358,7 @@ $(document).ready(function() {
 
 
 var addNewCells = function(newCells) {
-	console.log("newCells.length", newCells.length);
+	// console.log("newCells.length", newCells.length);
 	
 	// add new cells one by one
 	for (var i=0; i<newCells.length; i++) {
@@ -470,7 +470,7 @@ var simulate = function() {
 
 var createNewCell = function(cell) {
 	// create child node and update its properties
-	console.log("creating new cell");
+	//console.log("creating new cell");
 	var randomAngle = Math.random()*Math.PI*2;							// in rad
 	var childCell = createNode();
 	childCell.radius = 0;												// update child node
