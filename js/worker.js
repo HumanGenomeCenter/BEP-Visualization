@@ -6,24 +6,65 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
 	importScripts('colorbrewer.js');
 }
 
+// return list of dead cells
+
 // Worker's copy of global bep object
 var time = 0;			// global simulation time
 var cells = [];
 var running = false;	// running status
 
-var settings = {
-	n: 100,				// number of genes
-	p0: 0.001,			// initial replication probability
-	q0: 0.0000001,		// death probabiliy
-	r: 0.01, 			// mutation probabiliy of each gene when replicated
-	d: 10, 				// number of driver genes, first d genes of g
-	rootCells: 6,		// initial number of root cells
-};
+var settings;
+
+
+var intervalID;
+onmessage = function(e) {
+	var data = JSON.parse(e.data);
+	
+	if (data.settings) {
+		settings = data.settings;
+	}
+		
+	if (data.message === "getInitialCells") {
+		initiateCells();
+		postMessage( JSON.stringify({'message':'initialCells', 'initialCells':cells}) );
+	} 
+	
+
+	
+	else if (data.message === "startSimulation") {
+		console.log("worker: startSimulation");
+		running = true;
+		// update settings..
+	
+		simulate();
+		
+	//	postMessage( JSON.stringify({"cells":cells}) );
+	}
+	
+	else if (data.message === "get" && data.start && data.end ) {
+		// can we keep running or do we need to stop?
+		
+	//	var newCells = cells.slice(currentIndex, e.data.range);
+	//	var newCells = cells.slice(currentIndex, e.data.range);
+	//	var message = {'message':newcells};
+		
+		
+		postMessage( JSON.stringify({'cells':cells.slice(data.start, data.end), 'time':time}) );
+			
+	} 
+}
+
+
+
+
+
+
 
 // Single Cell Object
 var Cell = function(parent) {
 	this.index = cells.length;				// append to cells array
 	this.radius = Math.floor(Math.random() * 5 + 10);
+	this.finalRadius = this.radius;
 	this.children = [];
 	this.alive = true;
 	this.died = undefined;				// timestep
@@ -41,9 +82,10 @@ var Cell = function(parent) {
 		this.driverGenes = initGenes(settings.d);
 		
 	} else {
-			
+		
+
 		this.parent = parent.index;			// add parent id
-		parent.children.push(this.index)	// add child id to parent
+		parent.children.push(this.index);	// add child id to parent
 		
 		// Mutate Genese
 		this.genes = parent.genes.slice(0);					// copy genes
@@ -69,68 +111,30 @@ var Cell = function(parent) {
 }
 
 var initiateCells = function(nr) {
+	/*
+	if (nr===undefined) nr = settings.initialNodes;
+	*/
 	cells = [];
-	if (nr===undefined) nr = settings.rootCells;
-	cells = [];
-	for (var i=0; i<nr; i++) {
+	for (var i=0; i<10; i++) {
 		cells[i] = new Cell(false);
 	}
 }
-initiateCells();
-
-
-
-
-// return list of dead cells
-
-onmessage = function(e) {
-
-	if (e.data.message === "play") {
-		console.log("worker: play");
-		running = true;
-		simulate({maxNumberOfCells:10000});
-		postMessage( JSON.stringify({"cells":cells}) );
-		
-	} else if (e.data.message === "pause") {
-		console.log("worker: pause");
-		running = false;
-
-	} else if (e.data.message === "reset") {
-		running = false;
-		initiateCells();
-		console.log("worker: reset");
-		postMessage( JSON.stringify({"cells":cells}) );
-	}
-	else if (e.data.message === "get" && e.data.amount > 0) {
-		// can we keep running or do we need to stop?
-		
-	//	var newCells = cells.slice(currentIndex, e.data.range);
-	//	var newCells = cells.slice(currentIndex, e.data.range);
-	//	var message = {'message':newcells};
-		
-		
-		postMessage( JSON.stringify({'cells':cells, 'time':time}) );
-			
-	} else {
-		postMessage("Something else");
-	}
-}
 
 
 
 
 
-var simulate = function(options) {
+// Simulate one generation
 
-	console.time("simulate");
+var firstMessagesReturned = false;
+var secondMessagesReturned = false;
+var allMessagesReturned = false;
+var simulate = function() {
 	
 	while(true) {
-		
-	//	if (time > 10000) return;		// break when status changes
-
 		var cell, i;
 		var length = cells.length;	
-	
+
 		for (i=0; i<length; i++) {		// loop over cells
 			cell = cells[i];
 
@@ -146,24 +150,39 @@ var simulate = function(options) {
 				var parent = cells[i];
 				var child = new Cell(parent);
 				cells.push(child);
-					
+				
+			}		
+			
+			if (cells.length === 10000 && !firstMessagesReturned) {
+				// return first 10000 cells immediatly
+				firstMessagesReturned = true;
+				postMessage( JSON.stringify({'cells':cells, 'time':time}) );
 			}
 			
-			if (cells.length > options.maxNumberOfCells) {
-				console.log(cells.length, time);
-				console.timeEnd("simulate");
-				return;	// done
+			if (cells.length === 20000 && !secondMessagesReturned) {
+				// return first 10000 cells immediatly
+				secondMessagesReturned = true;
+				postMessage( JSON.stringify({'cells':cells.slice(10000, 20000), 'time':time}) );
 			}
 			
+			if (cells.length === settings.maxNumberOfCells && !allMessagesReturned) {
+				// return first 10000 cells immediatly
+				allMessagesReturned = true;
+				postMessage( JSON.stringify({'cells':cells, 'time':time}) );
+				return;
+			}
 			
 		}
 		time++;			// advance time
-
+		
 	}
-	
-	
-
 }
+
+
+
+
+
+
 
 
 var findRoot = function(id) {
