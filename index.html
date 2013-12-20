@@ -50,6 +50,12 @@
 			<p>
 				<button type="button" class="btn btn-default" id="addManyCells">Add 100 Cells</button>
 			</p>
+			<p>
+				Number of initial Cells: <span id="initialCellsNumber">6</span>
+				<form>
+					<input name="initialCellsSlider" id="initialCellsSlider" type="range" min="1" max="9" value="6">
+				</form>	
+			</p>
 		
 		</div>
 		<div class="col-xs-10" id="cells"></div>
@@ -71,7 +77,7 @@ var width = 800,
 /* - - - - - - - - -  Color - - - - - - - - -  */
 
 var initColor = function(nr) {
-	return colorbrewer.Set3[nr];		//  from Colorbrewer
+	return colorbrewer.Set1[nr];		//  from Colorbrewer 1-9 colors...
 }
 var getColor;
 
@@ -88,14 +94,15 @@ var settings = {
 	r: 0.01, 			// mutation probabiliy of each gene when replicated
 	d: 10, 				// number of driver genes, first d genes of g
 	maxNumberOfCells: 100000,
-	initialNodes: 10,
+	initialNodes: 6,
 };
 /* - - - - - - - - -  Settings End - - - - - - - - -  */
 
 
 
-// initial nodes
-var nodes = [];
+
+var nodes = [];			// displayed nodes
+var cachedNodes = []	// chached nodes from webworker
 
 var force = d3.layout.force()
 	.gravity(0.00)
@@ -250,7 +257,7 @@ var interpolateNodeSize = function(node, easeMode) {
 	if (node.radius === node.finalRadius) return;
 	var interpol = d3.interpolateNumber(node.radius, node.finalRadius);
 	var ease= d3.ease(easeMode);
-	var duration = 2000;
+	var duration = 1000;
 	var timer = d3.timer(function(t){
 		if (t>duration) {
 			node.radius = node.finalRadius;		// make sure the radius become the original radius
@@ -292,21 +299,46 @@ $(document).ready(function() {
 	});
 	
 	$("#addCell").click(function() {
-		addRandomCells(1);
+		addSingleCell();
 	});
 	
 	$("#addManyCells").click(function() {
-		addRandomCells(100);
+
 	});
 	
-	
-	$("#resetCells").click(function() {
+	$("#resetCells").on('click', function() {
 		console.log("reset");
 	});
 	
-	
-	
-	
+	$("#initialCellsSlider").on('change', function(e) {
+		console.log(this.value);
+		$('#initialCellsNumber').html(this.value);
+		
+		var n = this.value;
+
+		
+	//	getColor = initColor(n);
+		cachedNodes.forEach(function(node,i, arr){
+		//	console.log(node.index ,i); 
+		//	node.color=getColor[i]
+		});
+		
+		settings.initialNodes = n;
+		
+		if (n > nodes.length) {
+			// add node
+			console.log("add node");
+			addSingleCell();
+		} else if (n < nodes.length) {
+			// remove node
+			console.log("remove node");
+			removeSingleCell();
+		}
+		
+		
+		
+		
+	});
 	
 	
 	
@@ -325,12 +357,12 @@ $(document).ready(function() {
 });	
 
 
-var addNewCells = function(newCells) {
-	console.log("newCell");
+var addInitialCells = function() {
 	
+	nodes = [];
 	// add new cells one by one
-	for (var i=0; i<newCells.length; i++) {
-		nodes.push(newCells[i]);
+	for (var i=0; i<settings.initialNodes; i++) {
+		nodes.push(cachedNodes[i]);
 	}
 		
 	force.charge(500);
@@ -357,8 +389,111 @@ var addNewCells = function(newCells) {
 	
 }
 
-
+// for initial cells only
 var addSingleCell = function(nr) {
+	if (nodes.length >= 9) return;
+	
+	// add nodes. the slider can also jump between numbers e.g from 2 to 9..
+	for (var i = nodes.length; i<settings.initialNodes; i++) {
+		cachedNodes[i].radius = 0;
+		nodes.push(cachedNodes[i]);		// add cell from cache
+	}
+	console.log(settings.initialNodes, nodes.length);
+	
+	force.charge(100);	// neutralize force charge
+	
+	circles = inner.selectAll("circle")			// select
+		.data(nodes)							// rebind
+	
+	circles.enter()								// enter
+		.append("circle")
+			.attr("r", 0)									// initial radius
+			.attr("x", function(n) { return n.x; })
+			.attr("y", function(n) { return n.y; })
+			.attr("fill", function(n) {return n.color})
+			.transition()
+				.duration(1000)
+				.ease("cubic-in-out")		// match with interpolateNodeSize()
+				.attr("r", function(n) { return n.finalRadius; })
+				.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
+			;	// update visuals
+
+	force.start();
+}
+
+var removeSingleCell = function(nr) {
+	if (nodes.length <= 1) return;
+	
+	nodes = nodes.slice(0, settings.initialNodes);		// add cell from cache
+	console.log(settings.initialNodes, nodes.length);
+	
+	force.nodes(nodes);
+	circles = inner.selectAll("circle")			// select
+		.data(nodes)							// rebind
+	
+	circles.exit()								// exit
+		.attr("r", function(n) { return n.radius; })
+		.transition()
+			.duration(1000)
+			.ease("cubic-in-out")		// match with interpolateNodeSize()
+			.attr("r", function(n) { return 0; })
+			.each("end", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
+		.remove();
+		
+		
+	force.start();
+	
+	/*
+		// remove single cell
+
+	//	var r = nodes.length-1;
+		var r = 5;
+
+		nodes[r].alive = false;
+		nodes[r].finalRadius = 0;
+
+
+		force.charge(100);	// neutralize force charge
+		force.start();
+
+		circles = inner.selectAll('circles').select(function(n){ 
+			if (n.alive) {
+				return this;
+			} 
+			return null;
+		});				// only alive cells
+		console.log(circles.size());
+
+		var removedCircles = inner.selectAll('circles').select(function(n){ 
+			if (!n.alive) {
+				return this;
+			} 
+			return null;
+		});	// only dead cells
+		console.log(removedCircles.size());
+
+
+		removedCircles
+			.attr("r", function(n) { return n.radius; })
+			.attr('opacity', 1)
+			.transition()
+				.duration(2000)
+		//		.attr("r", function(n) { return n.finalRadius; })									// initial radius
+				.attr('opacity', function(n) {return 0.3; })
+				.ease("cubic-in-out")		// match with interpolateNodeSize()
+		//		.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
+				.each("end", function(n) { 
+					
+				//	nodes = nodes.slice(r, r+1);
+				//	circles = inner.selectAll("circle").filter(function(n){ return n.alive })			// select
+				//		.data(nodes)							// rebind
+				//	removedCircles.exit().remove();
+					
+				})
+		*/
+
+
+
 	
 }
 
@@ -393,21 +528,16 @@ worker.onmessage = function(e) {
 	if (data.message==='initialCells') {
 		console.log("worker response: initialCells", data);
 		
-	//	inner.data([]).exit().remove();
-		initialCells = data.initialCells;
+		cachedNodes = data.initialCells;
 		
-		getColor = initColor(initialCells.length);
-		for (var i=0; i<initialCells.length; i++) {
-			initialCells[i].color = getColor[i];
-			initialCells[i].x = width/2 + (Math.floor(Math.random()*10-5));
-			initialCells[i].y = height/2 + (Math.floor(Math.random()*10-5));
+		getColor = initColor(cachedNodes.length);		// update color scheme
+		for (var i=0; i<cachedNodes.length; i++) {
+			cachedNodes[i].color = getColor[i];			// asign  colors
+			cachedNodes[i].x = width/2 + (Math.floor(Math.random()*10-5));
+			cachedNodes[i].y = height/2 + (Math.floor(Math.random()*10-5));
 		}
-		
-		nodes = [];
-		
-		console.log(initialCells);
-		addNewCells(initialCells);
-
+				
+		addInitialCells();
 	}
 	
 }
