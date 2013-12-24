@@ -167,7 +167,7 @@ var inner = d3.select("div#cells").append("svg")
 	
 
 inner.selectAll("circle")
-	.data(nodes)
+	.data(nodes, function(n) { return n.index; })			// join node data with index
 	.enter()
 		.append("circle")
 			.attr("r", function(d) { return d.radius; })
@@ -311,19 +311,23 @@ $(document).ready(function() {
 	});
 	
 	$("#initialCellsSlider").on('change', function(e) {
-		console.log(this.value);
-		$('#initialCellsNumber').html(this.value);
+		
 		
 		var n = this.value;
-
 		
+		$('#initialCellsNumber').html(this.value);		// update number display
+		settings.initialNodes = n;						// update settings
+		console.log(n);
+
+		updateInitialNodes();
+/*
 	//	getColor = initColor(n);
 		cachedNodes.forEach(function(node,i, arr){
 		//	console.log(node.index ,i); 
 		//	node.color=getColor[i]
 		});
 		
-		settings.initialNodes = n;
+		
 		
 		if (n > nodes.length) {
 			// add node
@@ -335,7 +339,7 @@ $(document).ready(function() {
 			removeSingleCell();
 		}
 		
-		
+	*/
 		
 		
 	});
@@ -369,10 +373,11 @@ var addInitialCells = function() {
 	
 	force.nodes(nodes);
 	
-	circles = inner.selectAll("circle")			// select
-		.data(nodes)							// rebind
+	circles = inner.selectAll("circle")						// select
+		.data(nodes, function(n){ return n.index; } );		// rebind with key
 	
-	circles.enter()								// enter
+	
+	circles.enter()											// enter
 		.append("circle")
 			.attr("r", 0)									// initial radius
 			.attr("x", function(n) { return n.x; })
@@ -402,8 +407,8 @@ var addSingleCell = function(nr) {
 	
 	force.charge(100);	// neutralize force charge
 	
-	circles = inner.selectAll("circle")			// select
-		.data(nodes)							// rebind
+	circles = inner.selectAll("circle")						// select
+		.data(nodes, function(n){ return n.index; } );		// rebind with key
 	
 	circles.enter()								// enter
 		.append("circle")
@@ -424,12 +429,11 @@ var addSingleCell = function(nr) {
 var removeSingleCell = function(nr) {
 	if (nodes.length <= 1) return;
 	
-	nodes = nodes.slice(0, settings.initialNodes);		// add cell from cache
-	console.log(settings.initialNodes, nodes.length);
+	nodes = nodes.slice(0, settings.initialNodes);			// add cell from cache
 	
 	force.nodes(nodes);
-	circles = inner.selectAll("circle")			// select
-		.data(nodes)							// rebind
+	circles = inner.selectAll("circle")						// select
+		.data(nodes, function(n){ return n.index; } );		// rebind with key
 	
 	circles.exit()								// exit
 		.attr("r", function(n) { return n.radius; })
@@ -442,58 +446,85 @@ var removeSingleCell = function(nr) {
 		
 		
 	force.start();
+
+
+
+
 	
-	/*
-		// remove single cell
+}
 
-	//	var r = nodes.length-1;
-		var r = 5;
-
-		nodes[r].alive = false;
-		nodes[r].finalRadius = 0;
-
-
-		force.charge(100);	// neutralize force charge
-		force.start();
-
-		circles = inner.selectAll('circles').select(function(n){ 
-			if (n.alive) {
-				return this;
-			} 
-			return null;
-		});				// only alive cells
-		console.log(circles.size());
-
-		var removedCircles = inner.selectAll('circles').select(function(n){ 
-			if (!n.alive) {
-				return this;
-			} 
-			return null;
-		});	// only dead cells
-		console.log(removedCircles.size());
+var updateInitialNodes = function() {
+	var n = settings.initialNodes;			// new number of nodes
+	if (n > 9) return;
+	
+	
+	var nodesLength = nodes.length;			// cache current node length
+	
+	if (n < nodesLength) {
+		nodes = nodes.slice(0, n);			// remove nodes
+	} else if (n > nodesLength) {
+		for (var i=nodesLength; i<n; i++) {
+			nodes.push(cachedNodes[i]);		// add nodes from cachedNodes
+		}
+	} else {
+		return;								// n===nodesLength,  no change, return
+	}
+	
+	for (var i=n; i<cachedNodes.length; i++) {
+	//	delete(cachedNodes[i].x);
+	//	delete(cachedNodes[i].y);
+		delete(cachedNodes[i].px);
+		delete(cachedNodes[i].py);
+	}
 
 
-		removedCircles
-			.attr("r", function(n) { return n.radius; })
-			.attr('opacity', 1)
+	force.charge(100);
+
+	
+	
+	
+	circles = inner.selectAll("circle")						// select
+		.data(nodes, function(n){ return n.index; } );		// rebind with key
+	
+	circles.enter()											// enter
+		.append("circle")
+			.attr("r", 0)									// initial radius
+			
+			/*.attr("x", function(n,i) { 
+				
+				var prev = nodes[i-1];		// previous nodes x
+				var x = Math.cos(n.randomAngle)*prev.radius + prev.x;
+				console.log("prev", i, prev.x, x);
+				return x;
+			})
+			.attr("y", function(n,i) { 
+				var prev = nodes[i-1];		// previous nodes y
+				var y = Math.cos(n.randomAngle)*prev.radius + prev.y;
+				console.log("prev", i, prev.y, y);
+				return y;
+			})
+			*/
+			.attr("fill", function(n) {return n.color})
 			.transition()
-				.duration(2000)
-		//		.attr("r", function(n) { return n.finalRadius; })									// initial radius
-				.attr('opacity', function(n) {return 0.3; })
+				.duration(1000)
 				.ease("cubic-in-out")		// match with interpolateNodeSize()
-		//		.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
-				.each("end", function(n) { 
-					
-				//	nodes = nodes.slice(r, r+1);
-				//	circles = inner.selectAll("circle").filter(function(n){ return n.alive })			// select
-				//		.data(nodes)							// rebind
-				//	removedCircles.exit().remove();
-					
-				})
-		*/
+				.attr("r", function(n) { return n.finalRadius; })
+				.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
+			;	// update visuals
 
+	circles.exit()								// exit
+		.attr("r", function(n) { return n.radius; })
+		.transition()
+			.duration(1000)
+			.ease("cubic-in-out")		// match with interpolateNodeSize()
+			.attr("r", function(n) { return 0; })
+			.each("end", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
+		.remove();
+	
 
-
+	force.start();
+	
+	
 	
 }
 
@@ -523,7 +554,6 @@ var worker = new Worker("./js/worker.js");			// init
 
 worker.onmessage = function(e) {
 	var data = JSON.parse(e.data);
-	
 	
 	if (data.message==='initialCells') {
 		console.log("worker response: initialCells", data);
