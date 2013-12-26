@@ -72,19 +72,6 @@
 var width = 800,
     height = 500;
 
-
-
-/* - - - - - - - - -  Color - - - - - - - - -  */
-
-var initColor = function(nr) {
-	return colorbrewer.Set1[nr];		//  from Colorbrewer 1-9 colors...
-}
-var getColor;
-
-/* - - - - - - - - -  Color End - - - - - - - - -  */
-
-
-
 /* - - - - - - - - -  Settings - - - - - - - - -  */
 var settings = {
 	n: 100,				// number of genes
@@ -100,18 +87,33 @@ var settings = {
 
 
 
+/* - - - - - - - - -  Color - - - - - - - - -  */
+
+var initColor = function() {
+	return colorbrewer.Set1[9];		//  from Colorbrewer 1-9 colors...
+//	return colorbrewer.Set3[12];		//  from Colorbrewer 1-9 colors...
+	
+}
+var getColor = initColor();
+
+/* - - - - - - - - -  Color End - - - - - - - - -  */
+
+
+
+
+
+
 
 var nodes = [];			// displayed nodes
 var cachedNodes = []	// chached nodes from webworker
 
 var force = d3.layout.force()
 	.gravity(0.00)
- 	.charge(function(d, i) { return i ? 0 : -2000; })
-	.charge(-2000)
+	.charge(2000)
 	.friction(0.2)
 	.nodes(nodes)
 	.size([width, height])
-	.stop();
+	.start();
 	
 
 
@@ -299,7 +301,7 @@ $(document).ready(function() {
 	});
 	
 	$("#addCell").click(function() {
-		addSingleCell();
+		addCell();
 	});
 	
 	$("#addManyCells").click(function() {
@@ -311,36 +313,30 @@ $(document).ready(function() {
 	});
 	
 	$("#initialCellsSlider").on('change', function(e) {
-		
-		
 		var n = this.value;
-		
 		$('#initialCellsNumber').html(this.value);		// update number display
 		settings.initialNodes = n;						// update settings
-		console.log(n);
-
-		updateInitialNodes();
-/*
-	//	getColor = initColor(n);
-		cachedNodes.forEach(function(node,i, arr){
-		//	console.log(node.index ,i); 
-		//	node.color=getColor[i]
-		});
+		
+		var c = nodes.length;
+		
+		console.log(n, c);
+		
+		if (n>c) {
+			console.log("n>c");
+			for(var i=c; i<n; i++) {
+				console.log("...", i);
+				addCell();
+			}
+		} 
 		
 		
-		
-		if (n > nodes.length) {
-			// add node
-			console.log("add node");
-			addSingleCell();
-		} else if (n < nodes.length) {
-			// remove node
-			console.log("remove node");
-			removeSingleCell();
+		else if(n<c) {
+			console.log("n<c");
+			for(var i=c; i>n; i--) {
+				console.log(n);
+				removeCell();
+			}
 		}
-		
-	*/
-		
 		
 	});
 	
@@ -361,127 +357,13 @@ $(document).ready(function() {
 });	
 
 
-var addInitialCells = function() {
-	
-	nodes = [];
-	// add new cells one by one
-	for (var i=0; i<settings.initialNodes; i++) {
-		nodes.push(cachedNodes[i]);
-	}
-		
-	force.charge(500);
-	
-	force.nodes(nodes);
-	
-	circles = inner.selectAll("circle")						// select
-		.data(nodes, function(n){ return n.index; } );		// rebind with key
-	
-	
-	circles.enter()											// enter
-		.append("circle")
-			.attr("r", 0)									// initial radius
-			.attr("x", function(n) { return n.x; })
-			.attr("y", function(n) { return n.y; })
-			.attr("fill", function(n) {return n.color})
-			.transition()
-				.duration(1000)
-				.ease("cubic-in-out")		// match with interpolateNodeSize()
-				.attr("r", function(n) { return n.finalRadius; })
-				.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
-			;	// update visuals
-			
-	force.start();	
-	
-}
-
-// for initial cells only
-var addSingleCell = function(nr) {
-	if (nodes.length >= 9) return;
-	
-	// add nodes. the slider can also jump between numbers e.g from 2 to 9..
-	for (var i = nodes.length; i<settings.initialNodes; i++) {
-		cachedNodes[i].radius = 0;
-		nodes.push(cachedNodes[i]);		// add cell from cache
-	}
-	console.log(settings.initialNodes, nodes.length);
-	
-	force.charge(100);	// neutralize force charge
-	
-	circles = inner.selectAll("circle")						// select
-		.data(nodes, function(n){ return n.index; } );		// rebind with key
-	
-	circles.enter()								// enter
-		.append("circle")
-			.attr("r", 0)									// initial radius
-			.attr("x", function(n) { return n.x; })
-			.attr("y", function(n) { return n.y; })
-			.attr("fill", function(n) {return n.color})
-			.transition()
-				.duration(1000)
-				.ease("cubic-in-out")		// match with interpolateNodeSize()
-				.attr("r", function(n) { return n.finalRadius; })
-				.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
-			;	// update visuals
-
-	force.start();
-}
-
-var removeSingleCell = function(nr) {
-	if (nodes.length <= 1) return;
-	
-	nodes = nodes.slice(0, settings.initialNodes);			// add cell from cache
-	
-	force.nodes(nodes);
-	circles = inner.selectAll("circle")						// select
-		.data(nodes, function(n){ return n.index; } );		// rebind with key
-	
-	circles.exit()								// exit
-		.attr("r", function(n) { return n.radius; })
-		.transition()
-			.duration(1000)
-			.ease("cubic-in-out")		// match with interpolateNodeSize()
-			.attr("r", function(n) { return 0; })
-			.each("end", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
-		.remove();
-		
-		
-	force.start();
 
 
-
-
+var updateNodeDisplay = function(n) {
 	
-}
-
-var updateInitialNodes = function() {
-	var n = settings.initialNodes;			// new number of nodes
-	if (n > 9) return;
+	force.charge(200);
 	
-	
-	var nodesLength = nodes.length;			// cache current node length
-	
-	if (n < nodesLength) {
-		nodes = nodes.slice(0, n);			// remove nodes
-	} else if (n > nodesLength) {
-		for (var i=nodesLength; i<n; i++) {
-			nodes.push(cachedNodes[i]);		// add nodes from cachedNodes
-		}
-	} else {
-		return;								// n===nodesLength,  no change, return
-	}
-	
-	for (var i=n; i<cachedNodes.length; i++) {
-	//	delete(cachedNodes[i].x);
-	//	delete(cachedNodes[i].y);
-		delete(cachedNodes[i].px);
-		delete(cachedNodes[i].py);
-	}
-
-
-	force.charge(100);
-
-	
-	
+	var delay = 0;
 	
 	circles = inner.selectAll("circle")						// select
 		.data(nodes, function(n){ return n.index; } );		// rebind with key
@@ -489,24 +371,12 @@ var updateInitialNodes = function() {
 	circles.enter()											// enter
 		.append("circle")
 			.attr("r", 0)									// initial radius
-			
-			/*.attr("x", function(n,i) { 
-				
-				var prev = nodes[i-1];		// previous nodes x
-				var x = Math.cos(n.randomAngle)*prev.radius + prev.x;
-				console.log("prev", i, prev.x, x);
-				return x;
-			})
-			.attr("y", function(n,i) { 
-				var prev = nodes[i-1];		// previous nodes y
-				var y = Math.cos(n.randomAngle)*prev.radius + prev.y;
-				console.log("prev", i, prev.y, y);
-				return y;
-			})
-			*/
+			.attr("x", function(n) { return n.x; })
+			.attr("y", function(n,i) { return n.y; })
 			.attr("fill", function(n) {return n.color})
 			.transition()
 				.duration(1000)
+			//	.delay(function() { var d = delay; delay += 100; return d})
 				.ease("cubic-in-out")		// match with interpolateNodeSize()
 				.attr("r", function(n) { return n.finalRadius; })
 				.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
@@ -516,9 +386,13 @@ var updateInitialNodes = function() {
 		.attr("r", function(n) { return n.radius; })
 		.transition()
 			.duration(1000)
+		//	.delay(function() { var d = delay; delay += 200; return d})
 			.ease("cubic-in-out")		// match with interpolateNodeSize()
 			.attr("r", function(n) { return 0; })
-			.each("end", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
+			.each("end", function(n) { 
+				interpolateNodeSize(n, "cubic-in-out");
+				console.log("end"); 
+				})
 		.remove();
 	
 
@@ -529,25 +403,9 @@ var updateInitialNodes = function() {
 }
 
 
-/*
-var addRandomCells = function(newCells) {
-	
-	//force.nodes(newCells);
-	var i = 0;
-	var intervalID = window.setInterval(function() {
-		addNewCell(newCells[i]);
-		i++;
-		if (i>=newCells.length) {
-			clearInterval(intervalID);
-		}
-	}, 300);
-	
-	
-}
-
-*/
 
 /* - - - - - - - - - Worker - - - - - - - - - */
+
 
 var worker = new Worker("./js/worker.js");			// init
 
@@ -567,20 +425,70 @@ worker.onmessage = function(e) {
 			cachedNodes[i].y = height/2 + (Math.floor(Math.random()*10-5));
 		}
 				
-		addInitialCells();
+		// addInitialCells();
 	}
 	
 }
 
 
-worker.postMessage(JSON.stringify({'message':'getInitialCells', 'settings':settings}));
+// worker.postMessage(JSON.stringify({'message':'getInitialCells', 'settings':settings}));
 
 /* - - - - - - - - - Worker End - - - - - - - - - */
 
 
 
+/* - - - - - - - - - Create Inital Cells - - - - - - - - - */
 
 
+
+
+
+
+// Single Inital Cell Object
+var Cell = function() {
+	var i = nodes.length;
+	this.index = i;				// append to cells array
+	this.radius = 0;			// important to set initial radius to 0
+	this.finalRadius = Math.floor(Math.random() * 5 + 10);
+	this.children = [];
+	this.parent = false;	// root, no parents
+	this.alive = true;
+	this.died = undefined;						// timestep
+	this.born = 0;								// timestep, start, 0
+	this.randomAngle = Math.random()*Math.PI*2;
+	this.color = getColor[i];
+	this.x = width/2 + (Math.floor(Math.random()*20-10));
+	this.y = height/2 + (Math.floor(Math.random()*20-10));
+	this.driverGenes = d3.range(settings.d).map(function() { return false; });			// false -> not mutated
+	this.genes = d3.range(settings.n-settings.d).map(function() { return false; });		// false -> not mutated
+	if (i>0) {
+		var parentCell = nodes[Math.floor(Math.random()*i)];
+		this.x = Math.cos(this.randomAngle)*parentCell.radius + parentCell.x;
+		this.y = Math.sin(this.randomAngle)*parentCell.radius + parentCell.y;		
+	}
+	return this;
+}
+
+var addCell = function() {
+	nodes.push(new Cell());
+	updateNodeDisplay();
+}
+
+var removeCell = function() {
+	nodes.pop();
+	updateNodeDisplay();
+}
+
+var addInitialCells = function(nr) {
+	var intervalID = window.setInterval(function() {
+		addCell();
+		if (nodes.length>=settings.initialNodes) clearInterval(intervalID);
+	}, 200);	
+}();	// execute
+
+
+
+/* - - - - - - - - - Create Inital Cells  End - - - - - - - - - */
 
 
  
