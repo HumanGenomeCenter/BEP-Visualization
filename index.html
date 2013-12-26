@@ -15,6 +15,15 @@
 		svg {
 			background: #fff;
 		}
+		#settings {
+			background: rgba(255,255,255,0.9);
+			box-shadow: 5px 5px 10px #666666;
+			display: none;
+			position:absolute;
+			width: 960px;
+			z-index: 10;
+			margin-left: 0px;
+		}
 	</style>
 	
 </head>
@@ -26,8 +35,82 @@
 	  <h1>B.E.P Simulator <small>Cancer-subtype Simulation</small></h1>
 	</div>
 	<div class="row">
-		<div class="col-xs-2">
+		<div class="col-xs-4">
+			<p>
+				<button type="button" class="btn btn-default" id="settingsButton">Settings</button>
+			</p>
+		</div>
+	</div>
+	<div class="row" id="settings">
 		
+		<div class="col-xs-3">
+			<p>
+				Number of initial Cells: <span id="initialCellsNumber">6</span>
+				<input name="initialCellsSlider" id="initialCellsSlider" type="range" min="1" max="9" value="6">
+				<input name="initialCellsSlider" id="initialCellsSlider" type="number" min="1" max="9" value="6">
+				
+			</p>
+			<p>
+				maxPopulationSize: <span id="maxPopulationSize_label">300</span>	
+				<input id="maxPopulationSize" type="range" min="100" max="5000" value="100">
+			</p>
+			<p>
+				genomeSize: <span id="genomeSize_label">300</span>
+				<input id="genomeSize" type="range" min="100" max="1000" value="300">
+				
+			</p>
+			<p>
+				driverSize: <span id="driverSize_label">10</span>
+				<input id="driverSize" type="range" min="5" max="20" value="10">
+			</p>
+			
+			
+			
+		</div>
+		<div class="col-xs-3">Settings</div>
+		<div class="col-xs-3">
+			<p>
+				mutationRate: <span id="mutationRate_label">0.1</span>
+				<input id="mutationRate" type="range" min="0" max="100" value="10">
+			</p>
+			<p>
+				growthRate: <span id="growthRate_label">0.1</span>
+				<input id="growthRate" type="range" min="0" max="100" value="10">
+			</p>
+			<p>
+				deathRate: <span id="deathRate_label">0.0000001</span>
+				<input id="deathRate" type="range" min="1" max="1000" value="10">
+			</p>
+			<p>
+				deathRateForNonStem: <span id="deathRateForNonStem_label">0.01</span>
+				<input id="deathRateForNonStem" type="range" min="0" max="1000" value="10">
+			</p>
+		
+		</div>
+		<div class="col-xs-3">
+			<p>
+				symmetricReplicationP: <span id="symmetricReplicationProbablity_label">0.1</span>
+				<input id="symmetricReplicationProbablity" type="range" min="0" max="1000" value="100">
+			</p>
+			
+			<p>
+				fitnessIncrease: <span id="fitnessIncrease_label">5</span>
+				<input id="fitnessIncrease" type="range" min="1" max="20" value="5">
+			</p>
+			<p>
+				essensialGeneSize: <span id="essensialGeneSize_label">0</span>
+				<input id="essensialGeneSize" type="range" min="0" max="20" value="0">
+			</p>	
+			
+		
+			
+			
+		</div>
+		
+	</div>
+	<div class="row">
+		<div class="col-xs-2">
+			
 			<p>
 				<div class="btn-group">
 					<button type="button" class="btn btn-default btn-sm"id="playSimulation"><span class="glyphicon glyphicon-play"></span></button>
@@ -50,12 +133,7 @@
 			<p>
 				<button type="button" class="btn btn-default" id="addManyCells">Add 100 Cells</button>
 			</p>
-			<p>
-				Number of initial Cells: <span id="initialCellsNumber">6</span>
-				<form>
-					<input name="initialCellsSlider" id="initialCellsSlider" type="range" min="1" max="9" value="6">
-				</form>	
-			</p>
+			
 		
 		</div>
 		<div class="col-xs-10" id="cells"></div>
@@ -81,7 +159,7 @@ var settings = {
 	r: 0.01, 			// mutation probabiliy of each gene when replicated
 	d: 10, 				// number of driver genes, first d genes of g
 	maxNumberOfCells: 100000,
-	initialNodes: 6,
+	initialCells: 6,
 };
 /* - - - - - - - - -  Settings End - - - - - - - - -  */
 
@@ -104,14 +182,14 @@ var getColor = initColor();
 
 
 
-var nodes = [];			// displayed nodes
-var cachedNodes = []	// chached nodes from webworker
+var cells = [];			// displayed cells
+var cachedCells = []	// chached cells from webworker
 
 var force = d3.layout.force()
 	.gravity(0.00)
 	.charge(2000)
 	.friction(0.2)
-	.nodes(nodes)
+	.nodes(cells)
 	.size([width, height])
 	.start();
 	
@@ -169,7 +247,7 @@ var inner = d3.select("div#cells").append("svg")
 	
 
 inner.selectAll("circle")
-	.data(nodes, function(n) { return n.index; })			// join node data with index
+	.data(cells, function(n) { return n.index; })			// join node data with index
 	.enter()
 		.append("circle")
 			.attr("r", function(d) { return d.radius; })
@@ -179,12 +257,12 @@ inner.selectAll("circle")
 
 
 force.on("tick", function(e) {
-	var q = d3.geom.quadtree(nodes),
+	var q = d3.geom.quadtree(cells),
 	i = 0,
-	n = nodes.length;
-	// while (++i < n) q.visit(collide(nodes[i]));
+	n = cells.length;
+	// while (++i < n) q.visit(collide(cells[i]));
 	for(i=0;i<n;i++) {
-		q.visit(collide(nodes[i]));
+		q.visit(collide(cells[i]));
 	}
 	inner.selectAll("circle")
 		.attr("cx", function(n) { return n.x; })
@@ -286,6 +364,8 @@ $(document).ready(function() {
 
 	$("#playSimulation").click(function() {
 		console.log("play");
+		worker.postMessage(JSON.stringify({'message':'startSimulation', 'settings':settings, 'cells':cells}));
+		
 	});
 	
 	$("#pauseSimulation").click(function() {
@@ -314,29 +394,14 @@ $(document).ready(function() {
 	
 	$("#initialCellsSlider").on('change', function(e) {
 		var n = this.value;
-		$('#initialCellsNumber').html(this.value);		// update number display
-		settings.initialNodes = n;						// update settings
+		$('#initialCellsNumber').html(n);		// update number display
+		settings.initialCells = n;						// update settings
 		
-		var c = nodes.length;
-		
-		console.log(n, c);
-		
-		if (n>c) {
-			console.log("n>c");
-			for(var i=c; i<n; i++) {
-				console.log("...", i);
-				addCell();
-			}
-		} 
-		
-		
-		else if(n<c) {
-			console.log("n<c");
-			for(var i=c; i>n; i--) {
-				console.log(n);
-				removeCell();
-			}
-		}
+		var diff = n - cells.length;
+		console.log("diff", diff);
+		if (diff>0) addCell(diff);
+		if (diff<0) removeCell(diff);
+
 		
 	});
 	
@@ -354,6 +419,20 @@ $(document).ready(function() {
 	$("#zoomReset").click(function() {
 		zoomBehaviour(0);
 	});
+	
+	
+	$("#settingsButton").click(function() {
+		if ($("#settings").is( ":hidden" )) {
+			$("#settings").slideDown();
+		} else {
+			$("#settings").slideUp();
+		}
+		
+	});
+	
+	
+	
+	
 });	
 
 
@@ -361,12 +440,12 @@ $(document).ready(function() {
 
 var updateNodeDisplay = function(n) {
 	
-	force.charge(200);
+	force.charge(0);
 	
 	var delay = 0;
 	
 	circles = inner.selectAll("circle")						// select
-		.data(nodes, function(n){ return n.index; } );		// rebind with key
+		.data(cells, function(n){ return n.index; } );		// rebind with key
 	
 	circles.enter()											// enter
 		.append("circle")
@@ -409,29 +488,34 @@ var updateNodeDisplay = function(n) {
 
 var worker = new Worker("./js/worker.js");			// init
 
-
 worker.onmessage = function(e) {
 	var data = JSON.parse(e.data);
+	console.log("from worker, data.message: ", data, data.message);
 	
-	if (data.message==='initialCells') {
-		console.log("worker response: initialCells", data);
+	if (data.message==='firstCells') {
+		console.log("worker response: firstCells", data);
 		
-		cachedNodes = data.initialCells;
+		cachedCells = data.cells;
 		
-		getColor = initColor(cachedNodes.length);		// update color scheme
-		for (var i=0; i<cachedNodes.length; i++) {
-			cachedNodes[i].color = getColor[i];			// asign  colors
-			cachedNodes[i].x = width/2 + (Math.floor(Math.random()*10-5));
-			cachedNodes[i].y = height/2 + (Math.floor(Math.random()*10-5));
+		/*
+		getColor = initColor(cachedCells.length);		// update color scheme
+		for (var i=0; i<cachedCells.length; i++) {
+			cachedCells[i].color = getColor[i];			// asign  colors
+			cachedCells[i].x = width/2 + (Math.floor(Math.random()*10-5));
+			cachedCells[i].y = height/2 + (Math.floor(Math.random()*10-5));
 		}
+		*/
 				
 		// addInitialCells();
+	}
+	
+	if (data.message==='allCells') {
+		allCells = data.cells;
 	}
 	
 }
 
 
-// worker.postMessage(JSON.stringify({'message':'getInitialCells', 'settings':settings}));
 
 /* - - - - - - - - - Worker End - - - - - - - - - */
 
@@ -439,14 +523,9 @@ worker.onmessage = function(e) {
 
 /* - - - - - - - - - Create Inital Cells - - - - - - - - - */
 
-
-
-
-
-
 // Single Inital Cell Object
 var Cell = function() {
-	var i = nodes.length;
+	var i = cells.length;
 	this.index = i;				// append to cells array
 	this.radius = 0;			// important to set initial radius to 0
 	this.finalRadius = Math.floor(Math.random() * 5 + 10);
@@ -462,30 +541,61 @@ var Cell = function() {
 	this.driverGenes = d3.range(settings.d).map(function() { return false; });			// false -> not mutated
 	this.genes = d3.range(settings.n-settings.d).map(function() { return false; });		// false -> not mutated
 	if (i>0) {
-		var parentCell = nodes[Math.floor(Math.random()*i)];
+		var parentCell = cells[Math.floor(Math.random()*i)];
 		this.x = Math.cos(this.randomAngle)*parentCell.radius + parentCell.x;
 		this.y = Math.sin(this.randomAngle)*parentCell.radius + parentCell.y;		
 	}
 	return this;
 }
 
-var addCell = function() {
-	nodes.push(new Cell());
+var addCell = function(nr) {
+	if (nr===undefined) nr = 1;
+	for(var i=0; i<nr; i++) {
+		cells.push(new Cell());
+	}
 	updateNodeDisplay();
 }
 
-var removeCell = function() {
-	nodes.pop();
+var removeCell = function(nr) {
+	if (nr===undefined) nr = 1;
+	for(var i=0; i<Math.abs(nr); i++) {
+		cells.pop();
+	}
 	updateNodeDisplay();
 }
 
 var addInitialCells = function(nr) {
 	var intervalID = window.setInterval(function() {
 		addCell();
-		if (nodes.length>=settings.initialNodes) clearInterval(intervalID);
+		if (cells.length>=settings.initialCells) clearInterval(intervalID);
 	}, 200);	
-}();	// execute
+}();	// execute immeditaly
 
+var addAdditionalCells = function(nr) {
+	if (nr===undefined) nr = 1;
+	
+	force.charge(0); // neutralize force
+	
+	console.log("addAdditionalCells", nr, cells.length);
+	var intervalID = window.setInterval(function() {
+	//	console.log("addAdditionalCells", nr, cells.length);	
+			
+			var cell = cachedCells[cells.length];
+			var parentCell = cells[cell.parent]
+			cell.color = varyColor(d3.rgb(parentCell.color));
+			cell.x = Math.cos(cell.randomAngle)*parentCell.radius + parentCell.x;
+			cell.y = Math.sin(cell.randomAngle)*parentCell.radius + parentCell.y;
+			cells.push(cell);
+			
+			// update generation
+			$('#timeStep').text(cell.born);
+			updateNodeDisplay();
+		
+		
+		if (cells.length>=nr) clearInterval(intervalID);
+		
+	}, 200);
+}
 
 
 /* - - - - - - - - - Create Inital Cells  End - - - - - - - - - */
