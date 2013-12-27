@@ -39,6 +39,7 @@
 		.dropdown-menu-settings .settings-value {
 			font-size: 2em;
 			line-height: 1em;
+			color: #00f;
 		}
 		
 		.dropdown-menu-settings input {
@@ -65,12 +66,12 @@
 						<div class="settings-unit">
 							<div class="settings-value" id="initialCellsNumber">6</div>
 							<div>Number of Initial Cells</div>
-							<input name="initialCellsSlider" id="initialCellsSlider" type="range" min="1" max="9" value="6">
+							<input id="initialCellsSlider" type="range" min="1" max="9" value="6">
 						</div>
 						<div class="settings-unit">
-							<div class="settings-value" id="maxPopulationSize_label">300</div>	
+							<div class="settings-value" id="maxPopulationSize_label">1000</div>	
 							<div>Max. Population Size</div>
-							<input id="maxPopulationSize" type="range" min="100" max="5000" value="100">
+							<input id="maxPopulationSize" type="range" min="100" max="1000000" value="1000">
 						</div>	
 						<div class="settings-unit">
 							<div class="settings-value" id="genomeSize_label">300</div>	
@@ -106,32 +107,12 @@
 							<input id="deathRateForNonStem" type="range" min="0" max="100" value="10" data-min="0" data-max="0.5" data-value="0.1">
 						</div>	
 					</div>
-					
-							<!--
-
-
-										<p>
-											symmetricReplicationP: <span id="symmetricReplicationProbablity_label">0.1</span>
-											<input id="symmetricReplicationProbablity" type="range" min="0" max="1000" value="100">
-										</p>
-
-										<p>
-											fitnessIncrease: <span id="fitnessIncrease_label">5</span>
-											<input id="fitnessIncrease" type="range" min="1" max="20" value="5">
-										</p>
-										<p>
-											essensialGeneSize: <span id="essensialGeneSize_label">0</span>
-											<input id="essensialGeneSize" type="range" min="0" max="20" value="0">
-										</p>	
-
-
-								-->
 								
 					<div class="settings-column">
 						<div class="settings-unit">
 							<div class="settings-value" id="symmetricReplicationProbablity_label">0.5</div>
 							<div>Symmetric Repl. Probability</div>
-							<input name="symmetricReplicationProbablity" id="initialCellsSlider" type="range" min="0" max="100" value="50" data-min="0" data-max="1" data-value="0.5">
+							<input id="symmetricReplicationProbablity" type="range" min="0" max="100" value="50" data-min="0" data-max="1" data-value="0.5">
 						</div>
 						<div class="settings-unit">
 							<div class="settings-value" id="fitnessIncrease_label">5</div>	
@@ -518,22 +499,76 @@ $(document).ready(function() {
 		zoomBehaviour(0);
 	});
 	
+	// Settings
 	
-	$("#settingsButton").click(function() {
-		if ($("#settings").is( ":hidden" )) {
-			$("#settings").slideDown();
-		} else {
-			$("#settings").slideUp();
-		}
-		
+	$("#mutationRate").on("change", function() {
+		updateSettings(this, "mutationRate", "mutationRate_label", "mutationRate", "r");
 	});
 	
+	$("#growthRate").on("change", function() {
+		updateSettings(this, "growthRate", "growthRate_label", "p0");
+	});
 	
+	$("#deathRate").on("change", function() {
+		updateSettings(this, "deathRate", "deathRate_label", "q1");
+	});
+	
+	$("#deathRateForNonStem").on("change", function() {
+		updateSettings(this, "deathRateForNonStem", "deathRateForNonStem_label", "q0");
+	});
+	
+	$("#symmetricReplicationProbablity").on("change", function() {
+		updateSettings(this, "symmetricReplicationProbablity", "symmetricReplicationProbablity_label", "srp");
+	});
+	
+	/*
+	$("#maxTime").on("change", function() {
+		updateField("maxTime", this.value);
+	});
+	*/
+	
+	$("#maxPopulationSize").on("change", function() {
+		updateSettings(this, "maxPopulationSize", "maxPopulationSize_label", "maxNumberOfCells");
+	});
+	
+	$("#genomeSize").on("change", function() {
+		updateSettings(this, "genomeSize", "genomeSize_label", "n");
+	});
+	
+	$("#driverSize").on("change", function() {
+		updateSettings(this, "driverSize", "driverSize_label", "d");
+	});
+	
+	$("#essensialGeneSize").on("change", function() {
+		updateSettings(this, "essensialGeneSize", "essensialGeneSize_label", "essentialGeneSize");
+	});
+	
+	$("#fitnessIncrease").on("change", function() {
+		updateSettings(this, "fitnessIncrease", "fitnessIncrease_label", "fitnessIncrease");
+	});
 	
 	
 });	
 
 
+var updateSettings = function(that, key, label, settingName) {
+	var s = $(that);
+	var sliderMin = s.attr('min');
+	var sliderMax = s.attr('max');
+	var value = s.val();
+	var displayValue = value;
+		
+	if (s.data('min')!==undefined && s.data('max')!==undefined) {		// transpose
+		var scale = d3.scale.linear()
+						.domain([sliderMin, sliderMax])
+						.range([s.data('min'), s.data('max')]);
+		value = scale(value);
+		displayValue = value.toPrecision(2);
+	}
+
+	settings[settingName] = parseFloat(value);						// update settings ...
+	$("#"+key+"_label").html(displayValue);		// ... and display
+}
 
 
 var updateNodeDisplay = function(n) {
