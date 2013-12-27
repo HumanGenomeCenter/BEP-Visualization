@@ -14,16 +14,38 @@
 		}
 		svg {
 			background: #fff;
+			width: 100%;
 		}
 		#settings {
-			background: rgba(255,255,255,0.9);
-			box-shadow: 5px 5px 10px #666666;
+		/*	background: #6cf; */
 			display: none;
-			position:absolute;
-			width: 960px;
-			z-index: 10;
-			margin-left: 0px;
 		}
+		.dropdown-menu-settings {
+			width: 695px;
+			background: rgba(255,255,255,0.9);
+			padding: 0px;
+		}
+		.dropdown-menu-settings .settings-unit {
+			margin-bottom: 20px;
+
+		}
+		.dropdown-menu-settings .settings-column {
+			width: 220px;
+			float: left;
+			margin-right: 10px;
+			padding: 10px;
+		}
+		
+		.dropdown-menu-settings .settings-value {
+			font-size: 2em;
+			line-height: 1em;
+		}
+		
+		.dropdown-menu-settings input {
+			width: 100%;
+		}
+		
+		
 	</style>
 	
 </head>
@@ -34,59 +56,158 @@
 	<div class="page-header">
 	  <h1>B.E.P Simulator <small>Cancer-subtype Simulation</small></h1>
 	</div>
-	<div class="row">
-		<div class="col-xs-4">
-			<p>
-				<button type="button" class="btn btn-default" id="settingsButton">Settings</button>
-			</p>
-		</div>
-	</div>
+	<nav class="navbar navbar-default" role="navigation">
+		<ul class="nav navbar-nav">
+			<li class="dropdown">
+				<a href="#" class="dropdown-toggle" data-toggle="dropdown">Settings <b class="caret"></b></a>
+				<ul class="dropdown-menu dropdown-menu-settings">
+					<div class="settings-column">
+						<div class="settings-unit">
+							<div class="settings-value" id="initialCellsNumber">6</div>
+							<div>Number of Initial Cells</div>
+							<input name="initialCellsSlider" id="initialCellsSlider" type="range" min="1" max="9" value="6">
+						</div>
+						<div class="settings-unit">
+							<div class="settings-value" id="maxPopulationSize_label">300</div>	
+							<div>Max. Population Size</div>
+							<input id="maxPopulationSize" type="range" min="100" max="5000" value="100">
+						</div>	
+						<div class="settings-unit">
+							<div class="settings-value" id="genomeSize_label">300</div>	
+							<div>Genes</div>
+							<input id="genomeSize" type="range" min="100" max="1000" value="300">
+						</div>	
+						<div class="settings-unit">
+							<div class="settings-value" id="driverSize_label">10</div>	
+							<div>Driver Genes</div>
+							<input id="driverSize" type="range" min="5" max="20" value="10">
+						</div>	
+					</div>
+			
+					<div class="settings-column">
+						<div class="settings-unit">
+							<div class="settings-value" id="mutationRate_label">0.1</div>
+							<div>Mutation Rate</div>
+							<input id="mutationRate" type="range" min="0" max="100" value="10" data-min="0" data-max="0.5" data-value="0.1">
+						</div>
+						<div class="settings-unit">
+							<div class="settings-value" id="growthRate_label">0.1</div>	
+							<div>Growth Rate</div>
+							<input id="growthRate" type="range" min="0" max="100" value="10" data-min="0" data-max="0.5" data-value="0.1">
+						</div>	
+						<div class="settings-unit">
+							<div class="settings-value" id="deathRate_label">0.0000001</div>	
+							<div>Death Rate for Stem Cells</div>
+							<input id="deathRate" type="range" min="0" max="100" value="10" data-min="0" data-max="0.000001" data-value="0.0000001">
+						</div>	
+						<div class="settings-unit">
+							<div class="settings-value" id="deathRateForNonStem_label">0.01</div>	
+							<div>Death Rate for Non-stem Cells</div>
+							<input id="deathRateForNonStem" type="range" min="0" max="100" value="10" data-min="0" data-max="0.5" data-value="0.1">
+						</div>	
+					</div>
+					
+							<!--
+
+
+										<p>
+											symmetricReplicationP: <span id="symmetricReplicationProbablity_label">0.1</span>
+											<input id="symmetricReplicationProbablity" type="range" min="0" max="1000" value="100">
+										</p>
+
+										<p>
+											fitnessIncrease: <span id="fitnessIncrease_label">5</span>
+											<input id="fitnessIncrease" type="range" min="1" max="20" value="5">
+										</p>
+										<p>
+											essensialGeneSize: <span id="essensialGeneSize_label">0</span>
+											<input id="essensialGeneSize" type="range" min="0" max="20" value="0">
+										</p>	
+
+
+								-->
+								
+					<div class="settings-column">
+						<div class="settings-unit">
+							<div class="settings-value" id="symmetricReplicationProbablity_label">0.5</div>
+							<div>Symmetric Repl. Probability</div>
+							<input name="symmetricReplicationProbablity" id="initialCellsSlider" type="range" min="0" max="100" value="50" data-min="0" data-max="1" data-value="0.5">
+						</div>
+						<div class="settings-unit">
+							<div class="settings-value" id="fitnessIncrease_label">5</div>	
+							<div>Fitness Increase</div>
+							<input id="fitnessIncrease" type="range" min="1" max="20" value="5">
+						</div>	
+						<div class="settings-unit">
+							<div class="settings-value" id="essensialGeneSize_label">0</div>	
+							<div>Essensial Gene Size</div>
+							<input id="essensialGeneSize" type="range" min="0" max="20" value="0">
+						</div>	
+					
+						<div class="settings-unit">
+							<div class="navbar-right">
+								<button type="button" class="btn btn-default" id="resetSettings">Reset</span></button>
+								<button type="button" class="btn btn-default" id="saveSettings">Save</span></button>
+							</div>
+						</div>
+						
+					</div>
+				
+						
+					
+				
+					
+					
+				</ul>
+			</li>
+
+			<li class="dropdown">
+				<a href="#" class="dropdown-toggle" data-toggle="dropdown">Help <b class="caret"></b></a>
+				<ul class="dropdown-menu">
+					<li><a href="#">Action</a></li>
+					<li><a href="#">Another action</a></li>
+					<li><a href="#">Something else here</a></li>
+					<li class="divider"></li>
+					<li><a href="#">Separated link</a></li>
+					<li class="divider"></li>
+					<li><a href="#">One more separated link</a></li>
+				</ul>
+			</li>
+		</ul>
+	  	<form class="navbar-form navbar-left">
+			<div class="btn-group">
+				<button type="button" class="btn btn-default" id="playSimulation"><span class="glyphicon glyphicon-play"></span></button>
+				<button type="button" class="btn btn-default" id="pauseSimulation"><span class="glyphicon glyphicon-pause"></span></button>
+				<button type="button" class="btn btn-default" id="resetSimulation">Reset</span></button>
+				<button type="button" class="btn btn-default" id="getSimulationData">Get</span></button>
+			</div>
+		</form>
+		<p class="navbar-text">
+			Time <span class="badge" id="timeStep">0</span>
+		</p>
+		<p class="navbar-text">
+			Cells <span class="badge" id="timeStep">0</span>
+		</p>
+	   
+		<form class="navbar-form navbar-right">
+			<div class="btn-group">
+				<button type="button" class="btn btn-default" id="zoomIn"><span class="glyphicon glyphicon-zoom-in"></span></button>
+				<button type="button" class="btn btn-default" id="zoomOut"><span class="glyphicon glyphicon-zoom-out"></span></button>
+				<button type="button" class="btn btn-default" id="zoomReset"><span class="glyphicon glyphicon-search"></span></button>
+			</div>
+		</form>
+		<p class="navbar-text navbar-right">
+			Zoom <span class="badge" id="timeStep">1</span>
+		</p>
+
+
+	</nav>
+	
+
 	<div class="row" id="settings">
 		
-		<div class="col-xs-3">
-			<p>
-				Number of initial Cells: <span id="initialCellsNumber">6</span>
-				<input name="initialCellsSlider" id="initialCellsSlider" type="range" min="1" max="9" value="6">
-				<input name="initialCellsSlider" id="initialCellsSlider" type="number" min="1" max="9" value="6">
-				
-			</p>
-			<p>
-				maxPopulationSize: <span id="maxPopulationSize_label">300</span>	
-				<input id="maxPopulationSize" type="range" min="100" max="5000" value="100">
-			</p>
-			<p>
-				genomeSize: <span id="genomeSize_label">300</span>
-				<input id="genomeSize" type="range" min="100" max="1000" value="300">
-				
-			</p>
-			<p>
-				driverSize: <span id="driverSize_label">10</span>
-				<input id="driverSize" type="range" min="5" max="20" value="10">
-			</p>
-			
-			
-			
-		</div>
-		<div class="col-xs-3">Settings</div>
-		<div class="col-xs-3">
-			<p>
-				mutationRate: <span id="mutationRate_label">0.1</span>
-				<input id="mutationRate" type="range" min="0" max="100" value="10">
-			</p>
-			<p>
-				growthRate: <span id="growthRate_label">0.1</span>
-				<input id="growthRate" type="range" min="0" max="100" value="10">
-			</p>
-			<p>
-				deathRate: <span id="deathRate_label">0.0000001</span>
-				<input id="deathRate" type="range" min="1" max="1000" value="10">
-			</p>
-			<p>
-				deathRateForNonStem: <span id="deathRateForNonStem_label">0.01</span>
-				<input id="deathRateForNonStem" type="range" min="0" max="1000" value="10">
-			</p>
+	
 		
-		</div>
 		<div class="col-xs-3">
 			<p>
 				symmetricReplicationP: <span id="symmetricReplicationProbablity_label">0.1</span>
@@ -109,45 +230,19 @@
 		
 	</div>
 	<div class="row">
-		<div class="col-xs-2">
-			
-			<p>
-				<div class="btn-group">
-					<button type="button" class="btn btn-default btn-sm"id="playSimulation"><span class="glyphicon glyphicon-play"></span></button>
-					<button type="button" class="btn btn-default btn-sm"id="pauseSimulation"><span class="glyphicon glyphicon-pause"></span></button>
-					<button type="button" class="btn btn-default btn-sm"id="resetSimulation">Reset</span></button>
-					<button type="button" class="btn btn-default btn-sm"id="getSimulationData">Get</span></button>
-				</div>
-				Generation <span class="badge" id="timeStep">0</span>
-			</p>
-			<p>
-				<div class="btn-group">
-					<button type="button" class="btn btn-default btn-xs"id="zoomIn"><span class="glyphicon glyphicon-zoom-in"></span></button>
-					<button type="button" class="btn btn-default btn-xs"id="zoomOut"><span class="glyphicon glyphicon-zoom-out"></span></button>
-					<button type="button" class="btn btn-default btn-xs"id="zoomReset"><span class="glyphicon glyphicon-search"></span></button>
-				</div>
-			</p>
-			<p>
-				<button type="button" class="btn btn-default" id="addCell">Add Cell</button>
-			</p>
-			<p>
-				<button type="button" class="btn btn-default" id="addManyCells">Add 100 Cells</button>
-			</p>
-			
-		
-		</div>
-		<div class="col-xs-10" id="cells"></div>
+		<div class="col-xs-12" id="cells"></div>
 	</div>
 </div>
 <script src="./js/d3.min.js"></script>
-<script src="./js/queue.min.js"></script>
 <script src="./js/jquery-2.0.3.min.js"></script>
 <script src="./js/colorbrewer.js"></script>
+<script src="./js/bootstrap.min.js"></script>
+
 <script>
 
 // https://gist.github.com/mbostock/3231307
 
-var width = 800,
+var width = 960,
     height = 500;
 
 /* - - - - - - - - -  Settings - - - - - - - - -  */
@@ -402,9 +497,12 @@ $(document).ready(function() {
 		if (diff>0) addCell(diff);
 		if (diff<0) removeCell(diff);
 
-		
 	});
 	
+	// preventing settings dropdown to hide when slider are changed
+	$(".dropdown-menu-settings").on('click', function(e) {
+		e.stopPropagation();
+	});
 	
 	
 	// Zoom Buttons
