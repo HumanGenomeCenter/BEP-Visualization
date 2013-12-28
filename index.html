@@ -157,10 +157,8 @@
 		</ul>
 	  	<form class="navbar-form navbar-left">
 			<div class="btn-group">
-				<button type="button" class="btn btn-default" id="playSimulation"><span class="glyphicon glyphicon-play"></span></button>
-				<button type="button" class="btn btn-default" id="pauseSimulation"><span class="glyphicon glyphicon-pause"></span></button>
+				<button type="button" class="btn btn-default" id="startPauseSimulation"><span class="glyphicon glyphicon-play"></span></button>
 				<button type="button" class="btn btn-default" id="resetSimulation">Reset</span></button>
-				<button type="button" class="btn btn-default" id="getSimulationData">Get</span></button>
 			</div>
 		</form>
 		<p class="navbar-text">
@@ -448,50 +446,27 @@ var varyColor = function(color) {
 	}
 }
 
+var simulating = false
 $(document).ready(function() {
 
+	$("#startPauseSimulation").click(function() {
+		if (simulating) {
+			simulating = false
+			$(this).html('<span class="glyphicon glyphicon-play"></span>');
+		} else {
+			simulating = true
+			$(this).html('<span class="glyphicon glyphicon-pause"></span>');
+			
+		}
+	});
 
-	$("#playSimulation").click(function() {
-		console.log("play");
-		worker.postMessage(JSON.stringify({'message':'startSimulation', 'settings':settings, 'cells':cells}));
-		
-	});
-	
-	$("#pauseSimulation").click(function() {
-		console.log("pause");
-	});
 	
 	$("#resetSimulation").click(function() {
 		console.log("reset");
 	});
-	
-	$("#getSimulationData").click(function() {
-		worker.postMessage(JSON.stringify({'message':'get', 'start':0, 'end':1000}));
-	});
-	
-	$("#addCell").click(function() {
-		addCell();
-	});
-	
-	$("#addManyCells").click(function() {
 
-	});
 	
-	$("#resetCells").on('click', function() {
-		console.log("reset");
-	});
-	
-	$("#initialCellsSlider").on('change', function(e) {
-		var n = this.value;
-		$('#initialCellsNumber').html(n);		// update number display
-		settings.initialCells = n;						// update settings
-		
-		var diff = n - cells.length;
-		console.log("diff", diff);
-		if (diff>0) addCell(diff);
-		if (diff<0) removeCell(diff);
 
-	});
 	
 	// preventing settings dropdown to hide when slider are changed
 	$(".dropdown-menu-settings").on('click', function(e) {
@@ -513,6 +488,15 @@ $(document).ready(function() {
 	});
 	
 	// Settings
+	
+	$("#initialCellsSlider").on('change', function(e) {
+		var n = this.value;
+		$('#initialCellsNumber').html(n);		// update number display
+		settings.initialCells = n;						// update settings
+		var diff = n - cells.length;
+		if (diff>0) addCell(diff);
+		if (diff<0) removeCell(diff);
+	});
 	
 	$("#mutationRate").on("change", function() {
 		updateSettings(this, "mutationRate", "mutationRate_label", "mutationRate", "r");
@@ -617,9 +601,10 @@ var updateNodeDisplay = function(n) {
 				})
 		.remove();
 	
+	$("#cellLabel").text(cells.length);
+	$("#timeLabel").text(cells[cells.length-1].born);
 
 	force.start();
-
 }
 
 
@@ -635,26 +620,16 @@ worker.onmessage = function(e) {
 	
 	if (data.message==='firstCells') {
 		console.log("worker response: firstCells", data);
-		
 		cachedCells = data.cells;
-		
-		/*
-		getColor = initColor(cachedCells.length);		// update color scheme
-		for (var i=0; i<cachedCells.length; i++) {
-			cachedCells[i].color = getColor[i];			// asign  colors
-			cachedCells[i].x = width/2 + (Math.floor(Math.random()*10-5));
-			cachedCells[i].y = height/2 + (Math.floor(Math.random()*10-5));
-		}
-		*/
-				
-		// addInitialCells();
 	}
 	
 	if (data.message==='allCells') {
-		allCells = data.cells;
+		cachedCells = data.cells;
 	}
 	
 }
+
+//worker.postMessage(JSON.stringify({'message':'startSimulation', 'settings':settings, 'cells':cells}));
 
 
 
@@ -712,8 +687,12 @@ var addInitialCells = function(nr) {
 	}, 200);	
 }();	// execute immeditaly
 
+
+
 var addAdditionalCells = function(nr) {
 	if (nr===undefined) nr = 1;
+	if (simulating) return;
+	simulating = true;
 	
 	force.charge(0); // neutralize force
 	
@@ -732,10 +711,10 @@ var addAdditionalCells = function(nr) {
 			$('#timeStep').text(cell.born);
 			updateNodeDisplay();
 		
-		
 		if (cells.length>=nr) clearInterval(intervalID);
 		
 	}, 200);
+	simulating = false;
 }
 
 
