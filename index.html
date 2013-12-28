@@ -164,10 +164,10 @@
 			</div>
 		</form>
 		<p class="navbar-text">
-			Time <span class="badge" id="timeStep">0</span>
+			Time <span class="badge" id="timeLabel">0</span>
 		</p>
 		<p class="navbar-text">
-			Cells <span class="badge" id="timeStep">0</span>
+			Cells <span class="badge" id="cellLabel">0</span>
 		</p>
 	   
 		<form class="navbar-form navbar-right">
@@ -178,7 +178,7 @@
 			</div>
 		</form>
 		<p class="navbar-text navbar-right">
-			Zoom <span class="badge" id="timeStep">1</span>
+			Zoom <span class="badge" id="zoomLabel">1.0</span>
 		</p>
 
 
@@ -278,22 +278,34 @@ var zoom = d3.behavior.zoom()
 	.on("zoom", zoomed);		// register zoom event
 
 function zoomed() {
+	$("#zoomLabel").text(zoom.scale().toPrecision(2));
 	inner.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
 }
 
 var zooming = false;
+
 var zoomBehaviour = function(scale) {
+	var s, t, it, is, z;
+	console.log(scale);
+//	$("#zoomLabel").text(zoom.scale());
+	
 	// Clicks on the zoom buttons during zoom tweens are being ignored
 	if (!zooming) {
 		zooming = true;
-		if (scale===0) {
-			var t = {'start':zoom.translate(), 'end':[0,0]},
+		if (scale==='reset') {	// zoom reset
+			t = {'start':zoom.translate(), 'end':[0,0]},
 			s = {'start':zoom.scale(), 'end':1};
-		} else {
-			var t = {'start':zoom.translate(), 'end':[zoom.translate()[0]+(-scale*width/2), zoom.translate()[1]+(-scale*height/2)]},
-			s = {'start':zoom.scale(), 'end':zoom.scale()+scale};
+		} else if (scale==='in') {
+			// 1
+			z = zoom.scale()*2;
+			t = {'start':zoom.translate(), 'end':[zoom.translate()[0]+(-zoom.scale()*width/2), zoom.translate()[1]+(-zoom.scale()*height/2)] },
+			s = {'start':zoom.scale(), 'end':z};
+		} else if (scale==='out') {
+			z = zoom.scale()/2;
+			t = {'start':zoom.translate(), 'end':[zoom.translate()[0]+(z*width/2), zoom.translate()[1]+(z*height/2)] },
+			s = {'start':zoom.scale(), 'end':z};
 		}
-		var it = d3.interpolate(t.start, t.end),
+		it = d3.interpolate(t.start, t.end),
 		is = d3.interpolate(s.start, s.end);
 		d3.transition()
 			.duration(750)
@@ -305,6 +317,7 @@ var zoomBehaviour = function(scale) {
 			.each("end", function() {
 				zoom.scale(s.end).translate(t.end);		// match object zoom settings with visual settings
 				zooming = false;
+				$("#zoomLabel").text(zoom.scale().toPrecision(2));
 			});
 	}	
 }
@@ -488,15 +501,15 @@ $(document).ready(function() {
 	
 	// Zoom Buttons
 	$("#zoomIn").click(function() {
-		zoomBehaviour(1);
+		zoomBehaviour('in');
 	});
 	
 	$("#zoomOut").click(function() {
-		zoomBehaviour(-1);
+		zoomBehaviour('out');
 	});
 	
 	$("#zoomReset").click(function() {
-		zoomBehaviour(0);
+		zoomBehaviour('reset');
 	});
 	
 	// Settings
@@ -575,8 +588,6 @@ var updateNodeDisplay = function(n) {
 	
 	force.charge(0);
 	
-	var delay = 0;
-	
 	circles = inner.selectAll("circle")						// select
 		.data(cells, function(n){ return n.index; } );		// rebind with key
 	
@@ -588,7 +599,6 @@ var updateNodeDisplay = function(n) {
 			.attr("fill", function(n) {return n.color})
 			.transition()
 				.duration(1000)
-			//	.delay(function() { var d = delay; delay += 100; return d})
 				.ease("cubic-in-out")		// match with interpolateNodeSize()
 				.attr("r", function(n) { return n.finalRadius; })
 				.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
@@ -598,20 +608,18 @@ var updateNodeDisplay = function(n) {
 		.attr("r", function(n) { return n.radius; })
 		.transition()
 			.duration(1000)
-		//	.delay(function() { var d = delay; delay += 200; return d})
 			.ease("cubic-in-out")		// match with interpolateNodeSize()
 			.attr("r", function(n) { return 0; })
 			.each("end", function(n) { 
 				interpolateNodeSize(n, "cubic-in-out");
 				console.log("end"); 
+				force.charge(0);
 				})
 		.remove();
 	
 
 	force.start();
-	
-	
-	
+
 }
 
 
