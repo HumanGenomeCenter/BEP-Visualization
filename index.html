@@ -453,9 +453,11 @@ $(document).ready(function() {
 		if (simulating) {
 			simulating = false
 			$(this).html('<span class="glyphicon glyphicon-play"></span>');
+			
 		} else {
 			simulating = true
 			$(this).html('<span class="glyphicon glyphicon-pause"></span>');
+			worker.postMessage(JSON.stringify({'message':'startSimulation', 'settings':settings, 'cells':cells}));
 			
 		}
 	});
@@ -621,6 +623,7 @@ worker.onmessage = function(e) {
 	if (data.message==='firstCells') {
 		console.log("worker response: firstCells", data);
 		cachedCells = data.cells;
+		addAdditionalCells(100);
 	}
 	
 	if (data.message==='allCells') {
@@ -629,7 +632,6 @@ worker.onmessage = function(e) {
 	
 }
 
-//worker.postMessage(JSON.stringify({'message':'startSimulation', 'settings':settings, 'cells':cells}));
 
 
 
@@ -643,6 +645,7 @@ worker.onmessage = function(e) {
 var Cell = function() {
 	var i = cells.length;
 	this.index = i;				// append to cells array
+	this.subtype = i;			// initial subtypes
 	this.radius = 0;			// important to set initial radius to 0
 	this.finalRadius = Math.floor(Math.random() * 5 + 10);
 	this.children = [];
@@ -691,8 +694,8 @@ var addInitialCells = function(nr) {
 
 var addAdditionalCells = function(nr) {
 	if (nr===undefined) nr = 1;
-	if (simulating) return;
-	simulating = true;
+//	if (simulating) return;
+//	simulating = true;
 	
 	force.charge(0); // neutralize force
 	
@@ -701,7 +704,7 @@ var addAdditionalCells = function(nr) {
 	//	console.log("addAdditionalCells", nr, cells.length);	
 			
 			var cell = cachedCells[cells.length];
-			var parentCell = cells[cell.parent]
+			var parentCell = cells[cell.parent];
 			cell.color = varyColor(d3.rgb(parentCell.color));
 			cell.x = Math.cos(cell.randomAngle)*parentCell.radius + parentCell.x;
 			cell.y = Math.sin(cell.randomAngle)*parentCell.radius + parentCell.y;
@@ -718,7 +721,61 @@ var addAdditionalCells = function(nr) {
 }
 
 
+// start simulation with worker
+//worker.postMessage(JSON.stringify({'message':'startSimulation', 'settings':settings, 'cells':cells}));
+
+
 /* - - - - - - - - - Create Inital Cells  End - - - - - - - - - */
+
+
+
+
+/* - - - - - - - - - Transpose Cells for Streamgraph - - - - - - - - - */
+
+var streamData = [];
+
+var createStreamData = function() {
+	console.time("stream");
+	
+	var cell, lastCell,i,j,l;
+	streamSlice = 50; 					// number of sampled timepoints
+	lastCell = cells[cells.length-1];
+	maxTime = lastCell.born+1;	      // get latest time, add 1
+	l = lastCell.index;
+	
+	steps = maxTime / streamSlice;
+	
+	streamData = [];
+	
+	// create bare bones stream data array, populates with zeroes
+	for (i=0; i<settings.initialCells; i++) {
+		streamData[i] = [];
+		for (j=0; j<streamSlice; j++) {
+			streamData[i][j] = {'x':j, 'y':0};
+		}
+	}
+	
+
+	for(i=0; i<l; i++) {
+		
+		cell = cells[i];
+		var bin = Math.floor(cell.born/steps);
+		streamData[cell.subtype][bin].y++;			// increase bin
+	}
+	
+	for (i=0; i<settings.initialCells; i++) {
+		for (j=1; j<streamSlice; j++) {
+			streamData[i][j].y += streamData[i][j-1].y 
+		}
+	}
+	
+	console.timeEnd("stream");
+}
+
+
+/* - - - - - - - - - Create Inital Cells  End - - - - - - - - - */
+
+
 
 
  

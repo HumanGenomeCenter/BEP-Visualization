@@ -61,6 +61,7 @@ onmessage = function(e) {
 // Single Cell Object
 var Cell = function(parent) {
 	this.index = cells.length;				// append to cells array
+	this.subtype = parent.subtype;			// propagate subtype
 	this.radius = 0;
 	this.finalRadius = Math.floor(Math.random() * 5 + 10);
 	this.children = [];
