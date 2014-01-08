@@ -209,6 +209,9 @@
 		
 	</div>
 	<div class="row">
+		<div class="col-xs-12" id="stream"></div>
+	</div>
+	<div class="row">
 		<div class="col-xs-12" id="cells"></div>
 	</div>
 </div>
@@ -621,7 +624,7 @@ worker.onmessage = function(e) {
 	console.log("from worker, data.message: ", data, data.message);
 	
 	if (data.message==='firstCells') {
-		console.log("worker response: firstCells", data);
+		// console.log("worker response: firstCells", data);
 		cachedCells = data.cells;
 		addAdditionalCells(100);
 	}
@@ -754,7 +757,6 @@ var createStreamData = function() {
 			streamData[i][j] = {'x':j, 'y':0};
 		}
 	}
-	
 
 	for(i=0; i<l; i++) {
 		
@@ -770,7 +772,42 @@ var createStreamData = function() {
 	}
 	
 	console.timeEnd("stream");
+	
+	var n = 6, // number of layers
+	    m = 50, // number of samples per layer
+	    stack = d3.layout.stack().offset("zero");		// silhouette wiggle expand zero
+
+	var layer0 = stack(streamData);		// compute baseline
+	
+	var height = 200;
+
+	x = d3.scale.linear()
+	    .domain([0, m - 1])
+	    .range([0, width]);
+
+	y = d3.scale.linear()
+	   	.domain([0, d3.max(streamData, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); })])
+	    .range([height, 0]);
+
+	area = d3.svg.area()
+	    .x(function(d) { return x(d.x); })
+	    .y0(function(d) { return y(d.y0); })
+	    .y1(function(d) { return y(d.y0 + d.y); });
+
+	stream = d3.select("#stream").append("svg")
+	//	.attr("shape-rendering", "geometricPrecision")		// geometricPrecision optimizeSpeed auto crispEdges
+	    .attr("width", width)
+	    .attr("height", height);
+
+	stream.selectAll("path")
+	    .data(streamData)
+	  .enter().append("path")
+	    .attr("d", area)
+	    .style("fill", function(d, i) { return getColor[i]; });
+	
 }
+
+
 
 
 /* - - - - - - - - - Create Inital Cells  End - - - - - - - - - */
