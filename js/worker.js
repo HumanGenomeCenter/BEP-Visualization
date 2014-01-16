@@ -44,9 +44,9 @@ onmessage = function(e) {
 		simulate(1000);	
 		postMessage( JSON.stringify({'message':'firstCells', 'cells':cells}) );
 	
-		simulate();		// simulate rest
+		simulate(100000);		// simulate rest
 		postMessage( JSON.stringify({'message':'allCells', 'cells':cells}) );
-		
+	//	postMessage( JSON.stringify({'message':'simulationFinished'}) );
 	}
 	
 	
