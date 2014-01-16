@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Streamgraph</title>
+<style>
+
+body {
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  margin: auto;
+  position: relative;
+  width: 960px;
+}
+
+button {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
+</style>
+
+<script src="./js/numeric-1.2.6.min.js"></script>
+<script>
+function pca(X) {
+	console.log(X);
+    /*
+        Return matrix of all principle components as column vectors
+    */        
+//	console.log(X[0], X);
+	console.time("pca");
+    var m = X.length;
+    var sigma = numeric.div(numeric.dot(numeric.transpose(X), X), m);
+	console.timeEnd("pca");
+    return numeric.svd(sigma).U;
+}
+
+function pcaReduce(U, k) {
+    /*
+        Return matrix of k first principle components as column vectors            
+    */                
+    return U.map(function(row) {
+        return row.slice(0, k)
+    });
+}
+
+function pcaProject(X, Ureduce) {
+    /*
+        Project matrix X onto reduced principle components matrix
+    */
+    return numeric.dot(X, Ureduce);
+}
+
+function pcaRecover(Z, Ureduce) {
+    /*
+        Recover matrix from projection onto reduced principle components
+    */
+    return numeric.dot(Z, numeric.transpose(Ureduce));
+}
+                 
+window.onload = function() {
+    var x, y,z, X = [];
+    
+    var noise = function() {return Math.random() * 0.2 - 0.1};
+    
+    // Create random dataset with slope of 0.357 and noise
+    for (var i = 0; i < 1000; i++) {
+        x = Math.random() * 2 - 1;
+        y = x * 0.357;
+		z = Math.random() * 2 - 1;
+		a = Math.random() * 2 - 1;
+        X.push([x + noise(), y + noise(), z, a]);
+    }
+    
+    // Get principle components
+    var U = pca(X);
+    console.log('U', U);
+    // Print slope of first principle component
+    document.write(Math.abs(U[0][1] / U[0][0]).toFixed(3));
+};
+
+
+</script>
