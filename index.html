@@ -16,6 +16,9 @@
 			background: #fff;
 			width: 100%;
 		}
+		#stream svg {
+			height: 100px;
+		}
 		#settings {
 		/*	background: #6cf; */
 			display: none;
@@ -46,11 +49,11 @@
 			width: 100%;
 		}
 		
-		svg circle {
-			stroke-width: 5px;
-			stroke: #f00;
+		line.link {
+		  stroke: #000;
+		  stroke-opacity: 1;
+		  pointer-events: none;
 		}
-		
 		
 	</style>
 	
@@ -115,9 +118,9 @@
 								
 					<div class="settings-column">
 						<div class="settings-unit">
-							<div class="settings-value" id="symmetricReplicationProbablity_label">0.5</div>
+							<div class="settings-value" id="srp_label">0.5</div>
 							<div>Symmetric Repl. Probability</div>
-							<input id="symmetricReplicationProbablity" type="range" min="0" max="100" value="50" data-min="0" data-max="1" data-value="0.5">
+							<input id="srp" type="range" min="0" max="100" value="50" data-min="0" data-max="1" data-value="0.5">
 						</div>
 						<div class="settings-unit">
 							<div class="settings-value" id="fitnessIncrease_label">5</div>	
@@ -172,7 +175,14 @@
 		<p class="navbar-text">
 			Cells <span class="badge" id="cellLabel">0</span>
 		</p>
-	   
+		<p class="navbar-text">
+			<select class="form-control  input-sm" id="stream_select">
+				<option value="silhouette">Silhouette</option>
+				<option value="wiggle">Wiggle</option>
+				<option value="expand">Expand</option>
+				<option value="zero">Zero</option>
+			</select>
+		</p>
 		<form class="navbar-form navbar-right">
 			<div class="btn-group">
 				<button type="button" class="btn btn-default" id="zoomIn"><span class="glyphicon glyphicon-zoom-in"></span></button>
@@ -194,8 +204,8 @@
 		
 		<div class="col-xs-3">
 			<p>
-				symmetricReplicationP: <span id="symmetricReplicationProbablity_label">0.1</span>
-				<input id="symmetricReplicationProbablity" type="range" min="0" max="1000" value="100">
+				symmetricReplicationP: <span id="srp_label">0.1</span>
+				<input id="srp" type="range" min="0" max="1000" value="100">
 			</p>
 			
 			<p>
@@ -213,9 +223,11 @@
 		</div>
 		
 	</div>
+	
 	<div class="row">
 		<div class="col-xs-12" id="stream"><svg></svg></div>
 	</div>
+
 	<div class="row">
 		<div class="col-xs-12" id="cells"><svg></svg></div>
 	</div>
@@ -234,17 +246,51 @@
 var width = 960,
     height = 500;
 
+
 /* - - - - - - - - -  Settings - - - - - - - - -  */
-var settings = {
-	n: 100,				// number of genes
-//	g: ,				// genome, length n
-	p0: 0.001,			// initial replication probability
-	q0: 0.0000001,		// death probabiliy
-	r: 0.01, 			// mutation probabiliy of each gene when replicated
-	d: 10, 				// number of driver genes, first d genes of g
-	maxNumberOfCells: 100000,
-	initialCells: 6,
-};
+// Define or get from local storage
+
+
+var getSettings = function() {
+	var settings;
+	if (window.localStorage && window.localStorage.bepSettings) {
+		console.log("Reading settings from cache");
+		settings = JSON.parse(window.localStorage.bepSettings);
+		console.log("Updating Display");
+		
+		$('#initialCellsNumber').html(settings.initialCells);
+		$('#mutationRate_label').html(settings.mutationRate);
+		$('#growthRate_label').html(settings.growthRate);
+		$('#deathRate_label').html(settings.deathRate);
+		$('#deathRateForNonStem_label').html(settings.deathRateForNonStem);
+		$('#srp_label').html(settings.srp);
+		$('#maxPopulationSize_label').html(settings.maxNumberOfCells);
+		$('#genomeSize_label').html(settings.n);
+		$('#driverSize_label').html(settings.d);
+		$('#essensialGeneSize_label').html(settings.d);
+		$('#fitnessIncrease_label').html(settings.fitnessIncrease);		
+		
+	} else {
+		settings = {
+			n: 100,						// number of genes
+			d: 10, 						// number of driver genes, first d genes of g
+			e: 5,						// number of essential genes 
+			mutationRate: 0.01,			// mutation probabiliy of each gene when replicated
+			growthRate: 0.01,			// 0.0001
+			deathRate: 0.0001,		
+			deathRateForNonStem: 0.01,
+			srp: 0.1,	//s ymmetricReplicationProbablity
+			fitnessIncrease: 5, 
+			maxNumberOfCells: 1000,
+			initialCells: 6,
+		};
+	}
+	return settings;
+}
+
+settings = getSettings();
+
+
 /* - - - - - - - - -  Settings End - - - - - - - - -  */
 
 
@@ -333,8 +379,6 @@ var zoomBehaviour = function(scale) {
 /* - - - - - - - - -  Zoom End - - - - - - - - -  */
 
 
-
-	
 var inner = d3.select("div#cells svg")
 		.attr("width", width)
 		.attr("height", height)
@@ -344,7 +388,7 @@ var inner = d3.select("div#cells svg")
  		.attr("id", "inner");
 	
 
-inner.selectAll("circle")
+var circles = inner.selectAll("circle")
 	.data(cells, function(n) { return n.index; })			// join node data with index
 	.enter()
 		.append("circle")
@@ -354,25 +398,49 @@ inner.selectAll("circle")
 			.attr("fill", function(d) { return d.color; });
 
 
+
+
+var addLinks = function() {
+	var numberOfLinks = cells.length-settings.initialCells;
+	force.links(info.links.slice(0,numberOfLinks-1));
+	force.start();
+	
+	link = inner.selectAll("line.link")
+		.data(info.links.slice(0,numberOfLinks))
+		.enter()
+			.append("line")
+				.attr("class", "link")
+					.attr("x1", function(d) { return d.source.x; })
+					.attr("y1", function(d) { return d.source.y; })
+					.attr("x2", function(d) { return d.target.x; })
+					.attr("y2", function(d) { return d.target.y; })
+					.style("stroke-width", function(d) { return d.size || 2; });
+}
+
+
+
 force.on("tick", function(e) {
 	var q = d3.geom.quadtree(cells),
 	i = 0,
 	n = cells.length;
 	while (++i < n) q.visit(collide(cells[i]));
-//	for(i=0;i<n;i++) {
-//		q.visit(collide(cells[i]));
-//	}
-/*
-	inner.selectAll("circle")
-		.attr("cx", function(n) { return n.x; })
-		.attr("cy", function(n) { return n.y; });
-*/
+	updateCellPosition();
 });
  
 var updateCellPosition = function() {
-	inner.selectAll("circle")
-		.attr("cx", function(n) { return n.x; })
-		.attr("cy", function(n) { return n.y; });
+	// nodes
+	circles
+		.attr("cx", function(n) { if (!n.kill) return n.x; })
+		.attr("cy", function(n) { if (!n.kill) return n.y; });
+		
+	// links
+	if (force.links().length > 0) {
+		link
+			.attr("x1", function(d) { return d.source.x; })
+			.attr("y1", function(d) { return d.source.y; })
+			.attr("x2", function(d) { return d.target.x; })
+			.attr("y2", function(d) { return d.target.y; })
+	}
 }
 /*
 var dragging = false;
@@ -438,7 +506,8 @@ function collide(node) {
 
 // Interactions
 
-var interpolateNodeSize = function(node, easeMode) {
+var interpolateNodeSize = function(node) {	
+	var easeMode = "cubic-in-out";
 	if (node.radius === node.finalRadius) return;
 	var interpol = d3.interpolateNumber(node.radius, node.finalRadius);
 	var ease= d3.ease(easeMode);
@@ -446,29 +515,29 @@ var interpolateNodeSize = function(node, easeMode) {
 	var timer = d3.timer(function(t){
 		if (t>duration) {
 			node.radius = node.finalRadius;		// make sure the radius become the original radius
-			delete node.finalRadius;			// remove finalRadius property
+			node.finalRadius = 0;			// delete node.finalRadius;			// remove finalRadius property
 			return true; // true ends timer
 		}
 		node.radius = interpol(ease(t/duration));
 	});	
 }
 
-
-
-
 var varyColor = function(color) {
-	if (Math.random()*-0,5 > 0) {
-		return color.darker(0.1);
+	if (Math.random()-0.5 > 0) {
+		return color.darker(Math.random()/3);
 	} else {
-		return color.lighter(0.1);
+		return color.brighter(Math.random()/3);
 	}
 }
 
-var simulating = false
+var simulating = false;
+var simulationFinished = false;
 $(document).ready(function() {
 
 	$("#startPauseSimulation").click(function() {
-		if (simulating) {
+		if (simulationFinished) {
+			addAdditionalCells(cells.length + 100);
+		} else if (simulating) {
 			simulating = false
 			$(this).html('<span class="glyphicon glyphicon-play"></span>');
 			
@@ -480,7 +549,6 @@ $(document).ready(function() {
 		}
 	});
 
-	
 	$("#resetSimulation").click(function() {
 		console.log("reset");
 	});
@@ -510,7 +578,7 @@ $(document).ready(function() {
 	// Settings
 	
 	$("#initialCellsSlider").on('change', function(e) {
-		var n = this.value;
+		var n = parseInt(this.value);
 		$('#initialCellsNumber').html(n);		// update number display
 		settings.initialCells = n;						// update settings
 		var diff = n - cells.length;
@@ -519,23 +587,23 @@ $(document).ready(function() {
 	});
 	
 	$("#mutationRate").on("change", function() {
-		updateSettings(this, "mutationRate", "mutationRate_label", "mutationRate", "r");
+		updateSettings(this, "mutationRate", "mutationRate_label", "mutationRate", "mutationRate");
 	});
 	
 	$("#growthRate").on("change", function() {
-		updateSettings(this, "growthRate", "growthRate_label", "p0");
+		updateSettings(this, "growthRate", "growthRate_label", "growthRate");
 	});
 	
 	$("#deathRate").on("change", function() {
-		updateSettings(this, "deathRate", "deathRate_label", "q1");
+		updateSettings(this, "deathRate", "deathRate_label", "deathRate");
 	});
 	
 	$("#deathRateForNonStem").on("change", function() {
-		updateSettings(this, "deathRateForNonStem", "deathRateForNonStem_label", "q0");
+		updateSettings(this, "deathRateForNonStem", "deathRateForNonStem_label", "deathRateForNonStem");
 	});
 	
-	$("#symmetricReplicationProbablity").on("change", function() {
-		updateSettings(this, "symmetricReplicationProbablity", "symmetricReplicationProbablity_label", "srp");
+	$("#srp").on("change", function() {
+		updateSettings(this, "srp", "srp_label", "srp");
 	});
 	
 	/*
@@ -564,6 +632,10 @@ $(document).ready(function() {
 		updateSettings(this, "fitnessIncrease", "fitnessIncrease_label", "fitnessIncrease");
 	});
 	
+	$("#stream_select").on("change", function(e) {
+		streamType = $(this).val();
+		updateStreamData();
+	});	
 	
 });	
 
@@ -583,8 +655,12 @@ var updateSettings = function(that, key, label, settingName) {
 		displayValue = value.toPrecision(2);
 	}
 
-	settings[settingName] = parseFloat(value);						// update settings ...
-	$("#"+key+"_label").html(displayValue);		// ... and display
+	console.log(value);
+	settings[settingName] = parseFloat(value);						// update settings
+	$("#"+key+"_label").html(displayValue);							// update display
+	if (window.localStorage) {										// update cache
+		window.localStorage.bepSettings = JSON.stringify(settings);
+	}
 }
 
 
@@ -592,8 +668,40 @@ var updateNodeDisplay = function(n) {
 	
 	force.charge(0);
 	
+	// remove dead cells
+	
+	var currentTime = cells[cells.length-1].born;		// get the current time from the current cell's birth time
+	
+
+	
 	circles = inner.selectAll("circle")						// select
 		.data(cells, function(n){ return n.index; } );		// rebind with key
+	
+//	circles = circles.data(cells, function(n){ return n.index; } );		// rebind with key
+	
+	var cellsToDelete = [];
+	for (var i=0; i<cells.length; i++) {
+		if (currentTime >= cells[i].died) {
+			cellsToDelete.push(i);
+		}
+	}
+	for (var j = cellsToDelete.length-1; j>=0; j--) {
+		var d = cellsToDelete[j];
+		console.log("splice", j, d);
+		cells.splice(d, 1); 
+	}
+	console.log("---");
+	/*
+	cells.map(function(cell, i) {
+		if (currentTime >= cell.died) {
+			console.log("kill cell. index:", cell.index + " " + i +  ", currentTime:" + currentTime + ", died:" + cell.died);
+			console.log(cell);
+			cells.splice(i, 1); 	// remove cells
+		//	cell.radius = 0;
+		//	interpolateNodeSize(cell);
+		}
+	});
+	*/
 	
 	circles.enter()											// enter
 		.append("circle")
@@ -605,26 +713,39 @@ var updateNodeDisplay = function(n) {
 				.duration(1000)
 				.ease("cubic-in-out")		// match with interpolateNodeSize()
 				.attr("r", function(n) { return n.finalRadius; })
-				.each("start", function(n) { interpolateNodeSize(n, "cubic-in-out"); })
+				.each("start", function(n) { interpolateNodeSize(n); })
 			;	// update visuals
 
+
+	//circles.exit().remove();
+			
 	circles.exit()								// exit
-		.attr("r", function(n) { return n.radius; })
+	//	.attr("r", function(n) { return n.radius; })
 		.transition()
-			.duration(1000)
-			.ease("cubic-in-out")		// match with interpolateNodeSize()
-			.attr("r", function(n) { return 0; })
-			.each("end", function(n) { 
-				interpolateNodeSize(n, "cubic-in-out");
-				console.log("end"); 
-				force.charge(0);
-				})
+			.attr("fill", d3.rgb("#fff"))
+			.duration(199)				// match with delay time at adding cells...
+			.ease("cubic-in-out")
+			.attr("r", 0)
 		.remove();
+			
+		
+	/*	
+	node = node.data(force.nodes(), function(d) { return d.id;});
+	node.enter()
+		.append("circle")
+		.attr("class", function(d) { return "node " + d.id; })
+		.attr("r", 8);
+		
+	node.exit().remove();
+	*/
+	
+//	circles.exit().remove();
+	
+	force.start();
 	
 	$("#cellLabel").text(cells.length);
 	$("#timeLabel").text(cells[cells.length-1].born);
-
-	force.start();
+	
 }
 
 
@@ -632,24 +753,20 @@ var updateNodeDisplay = function(n) {
 /* - - - - - - - - - Worker - - - - - - - - - */
 
 
-var worker = new Worker("./js/worker.js");			// init
+var workerURL = "./js/worker.js?" + Math.floor(Math.random()*1000000);	// prevent worker caching
+var worker = new Worker(workerURL);			// init
 
 worker.onmessage = function(e) {
 	var data = JSON.parse(e.data);
 //	console.log("from worker, data.message: ", data, data.message);
 	
-	if (data.message==='firstCells') {
-		// console.log("worker response: firstCells", data);
+	if (data.message==='simulationFinished') {
+		console.log("simulationFinished");
 		cachedCells = data.cells;
+		cells = cachedCells.slice(0, settings.initialCells);		// update inital cells with mutations, time of death, etc
+		info = data.info;
+		console.log(cachedCells.length, info);
 		addAdditionalCells(100);
-	}
-	
-	else if (data.message==='simulationFinished') {
-		console.timeEnd("Simulation");
-	}
-	
-	else if (data.message==='allCells') {
-		cachedCells = data.cells;
 	}
 	
 }
@@ -667,9 +784,11 @@ worker.onmessage = function(e) {
 var Cell = function() {
 	var i = cells.length;
 	this.index = i;				// append to cells array
+	this.isStem = true;		// stem or normal... stem -> stem|normal, normal -> normal
 	this.subtype = i;			// initial subtypes
 	this.radius = 0;			// important to set initial radius to 0
-	this.finalRadius = Math.floor(Math.random() * 5 + 10);
+// 	this.finalRadius = Math.floor(Math.random() * 5 + 10);
+	this.finalRadius = 12;
 	this.children = [];
 	this.parent = false;	// root, no parents
 	this.alive = true;
@@ -680,7 +799,8 @@ var Cell = function() {
 	this.x = width/2 + (Math.floor(Math.random()*20-10));
 	this.y = height/2 + (Math.floor(Math.random()*20-10));
 	this.driverGenes = d3.range(settings.d).map(function() { return false; });			// false -> not mutated
-	this.genes = d3.range(settings.n-settings.d).map(function() { return false; });		// false -> not mutated
+	this.essentialGenes = d3.range(settings.e).map(function() { return false; })
+	this.genes = d3.range(settings.n-settings.d-settings.e).map(function() { return false; });		// false -> not mutated
 	if (i>0) {
 		var parentCell = cells[Math.floor(Math.random()*i)];
 		this.x = Math.cos(this.randomAngle)*parentCell.radius + parentCell.x;
@@ -715,31 +835,35 @@ var addInitialCells = function(nr) {
 
 
 var addAdditionalCells = function(nr) {
+	console.log(nr);
+	nr = cells.length + nr;
 	if (nr===undefined) nr = 1;
+	
 //	if (simulating) return;
 //	simulating = true;
 	
+	console.log(nr);
+	
+	var delay = 200;
 	force.charge(0); // neutralize force
-	
-	console.log("addAdditionalCells", nr, cells.length);
-	
-	intervalID = window.setInterval(function() {
-	//	console.log("addAdditionalCells", nr, cells.length);	
-			
-			var cell = cachedCells[cells.length];
-			var parentCell = cells[cell.parent];
-			cell.color = varyColor(d3.rgb(parentCell.color));
-			cell.x = Math.cos(cell.randomAngle)*parentCell.radius + parentCell.x;
-			cell.y = Math.sin(cell.randomAngle)*parentCell.radius + parentCell.y;
-			cells.push(cell);
-			
-			// update generation
-			$('#timeStep').text(cell.born);
-			updateNodeDisplay();
 		
+	var intervalID = window.setInterval(function() {
+			
+		var cell = cachedCells[cells.length];
+		var parentCell = cells[cell.parent];
+		cell.color = varyColor(d3.rgb(parentCell.color));
+		cell.x = Math.cos(cell.randomAngle)*parentCell.radius + parentCell.x;
+		cell.y = Math.sin(cell.randomAngle)*parentCell.radius + parentCell.y;
+		cells.push(cell);
+					
+		// update generation
+		$('#timeStep').text(cell.born);
+		updateNodeDisplay();
+		// updateStreamData();		
+			
 		if (cells.length>=nr) clearInterval(intervalID);
 		
-	}, 1);
+	}, delay);
 	simulating = false;
 }
 
@@ -758,82 +882,89 @@ function stopSimulation() {
 
 /* - - - - - - - - - Transpose Cells for Streamgraph - - - - - - - - - */
 
-var streamData = [];
+var streamData;
+var streamDataOK = true;
+var streamType = "silhouette";
+var updateStreamData = function() {
 
-var createStreamData = function() {
-	console.time("stream");
 	
-	var cell, lastCell,i,j,l;
-	streamSlice = 50; 					// number of sampled timepoints
-	lastCell = cells[cells.length-1];
-	maxTime = lastCell.born+1;	      // get latest time, add 1
-	l = lastCell.index;
+	if (streamDataOK) {
+		streamDataOK = false;
+		var cell, lastCell,i,j,l;
+		var streamSlice = 200; 					// number of sampled timepoints
+		var lastCell = cells[cells.length-1];
+		var maxTime = lastCell.born+1;	      // get latest time, add 1
+		var last = lastCell.index;
 	
-	steps = maxTime / streamSlice;
+		steps = maxTime / streamSlice;
 	
-	streamData = [];
+		streamData = [];
 	
-	// create bare bones stream data array, populates with zeroes
-	for (i=0; i<settings.initialCells; i++) {
-		streamData[i] = [];
-		for (j=0; j<streamSlice; j++) {
-			streamData[i][j] = {'x':j, 'y':0};
+		// create bare bones stream data array, populates with zeroes
+		for (i=0; i<settings.initialCells; i++) {
+			streamData[i] = [];
+			for (j=0; j<streamSlice; j++) {
+				streamData[i][j] = {'x':j, 'y':0};
+			}
 		}
-	}
 
-	for(i=0; i<l; i++) {
+		for(i=0; i<last; i++) {
 		
-		cell = cells[i];
-		var bin = Math.floor(cell.born/steps);
-		streamData[cell.subtype][bin].y++;			// increase bin
-	}
-	
-	for (i=0; i<settings.initialCells; i++) {
-		for (j=1; j<streamSlice; j++) {
-			streamData[i][j].y += streamData[i][j-1].y 
+			cell = cells[i];
+			var bin = Math.floor(cell.born/steps);
+			streamData[cell.subtype][bin].y++;			// increase bin
 		}
+	
+		for (i=0; i<settings.initialCells; i++) {
+			for (j=1; j<streamSlice; j++) {
+				streamData[i][j].y += streamData[i][j-1].y 
+			}
+		}
+	
+	//	console.timeEnd("stream");
+	
+		var n = 6, // number of layers
+		    m = 200, // number of samples per layer
+		    stack = d3.layout.stack().offset(streamType);		// silhouette wiggle expand zero
+
+		var layer0 = stack(streamData);		// compute baseline
+	
+		var height = 100;
+
+		x = d3.scale.linear()
+		    .domain([0, m - 1])
+		    .range([0, width]);
+
+		y = d3.scale.linear()
+		   	.domain([0, d3.max(streamData, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); })])
+		    .range([height, 0]);
+
+		area = d3.svg.area()
+		    .x(function(d) { return x(d.x); })
+		    .y0(function(d) { return y(d.y0); })
+		    .y1(function(d) { return y(d.y0 + d.y); });
+
+		stream = d3.select("div#stream svg")
+			.attr("shape-rendering", "geometricPrecision")		// geometricPrecision optimizeSpeed auto crispEdges
+		    .attr("width", width)
+		    .attr("height", height);
+
+		stream.selectAll("path")
+		    .data(streamData)
+			.attr("d", area)
+			.style("fill", function(d, i) { return getColor[i]; })
+		  .enter().append("path")
+		    .attr("d", area)
+		    .style("fill", function(d, i) { return getColor[i]; });
+		
+		streamDataOK = true;
 	}
-	
-	console.timeEnd("stream");
-	
-	var n = 6, // number of layers
-	    m = 50, // number of samples per layer
-	    stack = d3.layout.stack().offset("wiggle");		// silhouette wiggle expand zero
-
-	var layer0 = stack(streamData);		// compute baseline
-	
-	var height = 200;
-
-	x = d3.scale.linear()
-	    .domain([0, m - 1])
-	    .range([0, width]);
-
-	y = d3.scale.linear()
-	   	.domain([0, d3.max(streamData, function(layer) { return d3.max(layer, function(d) { return d.y0 + d.y; }); })])
-	    .range([height, 0]);
-
-	area = d3.svg.area()
-	    .x(function(d) { return x(d.x); })
-	    .y0(function(d) { return y(d.y0); })
-	    .y1(function(d) { return y(d.y0 + d.y); });
-
-	stream = d3.select("div#stream svg")
-	//	.attr("shape-rendering", "geometricPrecision")		// geometricPrecision optimizeSpeed auto crispEdges
-	    .attr("width", width)
-	    .attr("height", height);
-
-	stream.selectAll("path")
-	    .data(streamData)
-	  .enter().append("path")
-	    .attr("d", area)
-	    .style("fill", function(d, i) { return getColor[i]; });
-	
 }
 
 
-
-
 /* - - - - - - - - - Create Inital Cells  End - - - - - - - - - */
+
+
 
 
 
