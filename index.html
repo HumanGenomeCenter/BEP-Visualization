@@ -319,7 +319,7 @@ var force = d3.layout.force()
 	.gravity(0.00)
 	.charge(2000)
 	.friction(0.2)
-	.nodes(cells)
+	.nodes(cells, function(n){ return n.index})
 	.size([width, height])
 	.start();
 	
@@ -401,12 +401,21 @@ var circles = inner.selectAll("circle")
 
 
 var addLinks = function() {
-	var numberOfLinks = cells.length-settings.initialCells;
-	force.links(info.links.slice(0,numberOfLinks-1));
+	// calculate links from current cells
+	
+	links = [];
+	cells.map(function(cell) {
+		if (cell.parent && cell.index) {						// original cells don't have parents
+			links.push({'source': cell.parent, 'target': cell.index});
+		}
+	});
+
+	
+	force.links(links);
 	force.start();
 	
 	link = inner.selectAll("line.link")
-		.data(info.links.slice(0,numberOfLinks))
+		.data(links)
 		.enter()
 			.append("line")
 				.attr("class", "link")
@@ -415,6 +424,7 @@ var addLinks = function() {
 					.attr("x2", function(d) { return d.target.x; })
 					.attr("y2", function(d) { return d.target.y; })
 					.style("stroke-width", function(d) { return d.size || 2; });
+
 }
 
 
@@ -663,51 +673,30 @@ var updateSettings = function(that, key, label, settingName) {
 	}
 }
 
+var getInfo = function() {
+	var deadCells=[];
+	var now = cells[cells.length-1].born;
+	
+	for (var i=0; i<cells.length; i++) {
+		if (now >= cells[i].died ) {
+			deadCells.push(cells[i]);
+		}
+	}
+	console.log(deadCells);
+}
 
 var updateNodeDisplay = function(n) {
 	
 	force.charge(0);
 	
-	// remove dead cells
-	
-	var currentTime = cells[cells.length-1].born;		// get the current time from the current cell's birth time
-	
-
-	
 	circles = inner.selectAll("circle")						// select
-		.data(cells, function(n){ return n.index; } );		// rebind with key
-	
-//	circles = circles.data(cells, function(n){ return n.index; } );		// rebind with key
-	
-	var cellsToDelete = [];
-	for (var i=0; i<cells.length; i++) {
-		if (currentTime >= cells[i].died) {
-			cellsToDelete.push(i);
-		}
-	}
-	for (var j = cellsToDelete.length-1; j>=0; j--) {
-		var d = cellsToDelete[j];
-		console.log("splice", j, d);
-		cells.splice(d, 1); 
-	}
-	console.log("---");
-	/*
-	cells.map(function(cell, i) {
-		if (currentTime >= cell.died) {
-			console.log("kill cell. index:", cell.index + " " + i +  ", currentTime:" + currentTime + ", died:" + cell.died);
-			console.log(cell);
-			cells.splice(i, 1); 	// remove cells
-		//	cell.radius = 0;
-		//	interpolateNodeSize(cell);
-		}
-	});
-	*/
-	
+		.data(cells, function(n) { return n.index; } );		// rebind with key
+
 	circles.enter()											// enter
 		.append("circle")
 			.attr("r", 0)									// initial radius
 			.attr("x", function(n) { return n.x; })
-			.attr("y", function(n,i) { return n.y; })
+			.attr("y", function(n) { return n.y; })
 			.attr("fill", function(n) {return n.color})
 			.transition()
 				.duration(1000)
@@ -715,31 +704,18 @@ var updateNodeDisplay = function(n) {
 				.attr("r", function(n) { return n.finalRadius; })
 				.each("start", function(n) { interpolateNodeSize(n); })
 			;	// update visuals
-
-
-	//circles.exit().remove();
-			
-	circles.exit()								// exit
-	//	.attr("r", function(n) { return n.radius; })
+	
+	circles.exit().remove();
+		
+	/*	
+	circles.exit()
 		.transition()
 			.attr("fill", d3.rgb("#fff"))
-			.duration(199)				// match with delay time at adding cells...
+			.duration(199)				// match with delay time at adding cells..., or remove transition completely
 			.ease("cubic-in-out")
 			.attr("r", 0)
 		.remove();
-			
-		
-	/*	
-	node = node.data(force.nodes(), function(d) { return d.id;});
-	node.enter()
-		.append("circle")
-		.attr("class", function(d) { return "node " + d.id; })
-		.attr("r", 8);
-		
-	node.exit().remove();
 	*/
-	
-//	circles.exit().remove();
 	
 	force.start();
 	
@@ -766,7 +742,7 @@ worker.onmessage = function(e) {
 		cells = cachedCells.slice(0, settings.initialCells);		// update inital cells with mutations, time of death, etc
 		info = data.info;
 		console.log(cachedCells.length, info);
-		addAdditionalCells(100);
+		addAdditionalCells(20);
 	}
 	
 }
@@ -848,16 +824,43 @@ var addAdditionalCells = function(nr) {
 	force.charge(0); // neutralize force
 		
 	var intervalID = window.setInterval(function() {
-			
-		var cell = cachedCells[cells.length];
+		
+
+		
+		// add cell
+		var cell = cachedCells[cells.length]; // !!! cells length is dynamic !!! when cells are removed, they are re-ADDED!!!
 		var parentCell = cells[cell.parent];
 		cell.color = varyColor(d3.rgb(parentCell.color));
 		cell.x = Math.cos(cell.randomAngle)*parentCell.radius + parentCell.x;
 		cell.y = Math.sin(cell.randomAngle)*parentCell.radius + parentCell.y;
 		cells.push(cell);
-					
+		
+		// check for dead cells and remove
+		
 		// update generation
-		$('#timeStep').text(cell.born);
+		var now = cell.born;		// get the current time from the current cell's birth time
+		$('#timeStep').text(now);
+		
+		
+		var cellsToDelete = [];
+		for (var i=0; i<cells.length; i++) {
+			if ((cells[i].died !== undefined) && (now >= cells[i].died)) {
+				cellsToDelete.push(i);
+				console.log("mark to delete", cells[i].index, i);
+				cells[i].alive = false;
+			}
+		}
+		console.log("updateNodeDisplay, before delete", cells.length, cellsToDelete);
+		for (var j = cellsToDelete.length-1; j>=0; j--) {
+			var d = cellsToDelete[j];
+			var deletedCell = cells.splice(d, 1); 
+			console.log("delete", d, deletedCell);
+		}
+		console.log("updateNodeDisplay, after delete", cells.length, cells.slice(0));
+
+	//	force.nodes(cells, function(n) { return n.index; } );			// rebind new cells with force layout
+		
+
 		updateNodeDisplay();
 		// updateStreamData();		
 			
@@ -963,6 +966,10 @@ var updateStreamData = function() {
 
 
 /* - - - - - - - - - Create Inital Cells  End - - - - - - - - - */
+
+
+
+
 
 
 

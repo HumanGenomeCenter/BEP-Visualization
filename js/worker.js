@@ -168,7 +168,7 @@ var simulate = function(limit) {
 						
 			cell = cells[i];
 			
-			if (!cell.alive) continue;	// skip if cell is dead
+			if (cell.died>=0) continue;	// skip if cell is dead
 			
 			// Remove
 		
@@ -180,7 +180,6 @@ var simulate = function(limit) {
 				if (cell.index < 5) {
 					console.log("StemCell died " + cell.index);
 				}
-				cell.alive = false; 	// update alive status
 				cell.died = time;		// time of death
 				if (info.aliveCells === 0) break simulationLoop;		// no more alive cells left...
 				continue;
@@ -237,7 +236,7 @@ var getFitness = function(cell) {
 
 
 var mutate = function(cell) {
-	if (cell.alive === false) return;		// don't mutate if cell is dead
+	if (cell.died >= 0) return;		// don't mutate if cell is dead
 	mutateGenes(cell.driverGenes);
 	mutateGenes(cell.essentialGenes);
 	mutateGenes(cell.genes);
@@ -254,15 +253,15 @@ var mutateGenes = function(genes) {
 }
 
 
-
+// TODO: move update to front
 var updateInfo = function() {
 	console.time("updateInfo");
 	var allCells = 0,
 	aliveCells = 0,
 	deadCells = 0,
 	stemCells = 0,
-	normalCells = 0,
-	links = [];
+	normalCells = 0;
+//	links = [];
 	
 	for (var i=0; i<cells.length; i++) {
 		var cell = cells[i];
@@ -274,10 +273,12 @@ var updateInfo = function() {
 		if (cell.isStem) stemCells++;
 		if (!cell.isStem) normalCells++;
 		
+		/*
 		// create Links
 		if (cell.parent) {		// original cells don't have parents
 			links.push({'source': cell.parent, 'target': cell.index});
 		}
+		*/
 	}
 	
 	info.allCells = cells.length;
@@ -285,7 +286,7 @@ var updateInfo = function() {
 	info.deadCells = deadCells;
 	info.stemCells = stemCells;
 	info.normalCells = normalCells;
-	info.links = links;
+//	info.links = links;
 	
 	compareGenes();
 	console.timeEnd("updateInfo");
@@ -326,7 +327,6 @@ var compareGenes = function() {
 		}
 	}
 	info.reducedGenes = reducedGenes;
-	
 	
 	console.timeEnd("compareGenes");
 }
