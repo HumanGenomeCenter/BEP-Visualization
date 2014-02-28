@@ -50,9 +50,12 @@
 		}
 		
 		line.link {
-		  stroke: #000;
-		  stroke-opacity: 1;
-		  pointer-events: none;
+			stroke: #555;
+			stroke-linecap: round;
+			stroke-width: 2;
+			stroke-opacity: 1;
+			pointer-events: none;
+			marker-end: url(#Arrow);
 		}
 		
 	</style>
@@ -225,11 +228,22 @@
 	</div>
 	
 	<div class="row">
-		<div class="col-xs-12" id="stream"><svg></svg></div>
+		<div class="col-xs-12" id="stream">
+			<svg>
+			</svg>
+		</div>
 	</div>
 
 	<div class="row">
-		<div class="col-xs-12" id="cells"><svg></svg></div>
+		<div class="col-xs-12" id="cells">
+			<svg>
+				<defs>
+					<marker id="Arrow" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+						<path d="M 0 0 L 10 5 L 0 10 z" />
+					</marker>
+				</defs>
+			</svg>
+		</div>
 	</div>
 </div>
 <script src="./js/d3.min.js"></script>
@@ -297,12 +311,11 @@ settings = getSettings();
 
 /* - - - - - - - - -  Color - - - - - - - - -  */
 
-var initColor = function() {
-	return colorbrewer.Set1[9];		//  from Colorbrewer 1-9 colors...
-//	return colorbrewer.Set3[12];		//  from Colorbrewer 1-9 colors...
-	
-}
-var getColor = initColor();
+/* Create Array of string colors, declare function & execute once */
+var getColor = function() {
+	return colorbrewer.Set1[9].map(function(c){ return c; });
+//	return colorbrewer.Set3[12].map(function(c){ return c; });
+}();
 
 /* - - - - - - - - -  Color End - - - - - - - - -  */
 
@@ -316,16 +329,37 @@ var cells = [];			// displayed cells
 var cachedCells = []	// chached cells from webworker
 
 var force = d3.layout.force()
-	.gravity(0.00)
-	.charge(2000)
-	.friction(0.2)
-	.nodes(cells, function(n){ return n.index})
 	.size([width, height])
+	.gravity(0.00)
+	.charge(100)
+//	.chargeDistance
+	.friction(0.2)
+	.nodes(cells, function(n){ return n.id})
+	.linkDistance(10)			// default 20
+	.linkStrength(0)			// [0,1] default 1
 	.start();
 	
-
+	
+var tree = d3.layout.tree()
+	.size([width, height])
+	
+var tempChildren = [];
+var updateTree = function() {
+	cells.forEach(function(n){
+		var a = n.children.map(function(childID){
+			tempChildren.push(childID);
+			return cachedCells[childID];
+			
+		});
+		n.children = a;
+	})
+	tree.nodes(cells);
+	tempChildren.sort(function(a,b){ return a-b });
+}
+	
 
 /* - - - - - - - - -  Zoom - - - - - - - - -  */
+
 
 var zoom = d3.behavior.zoom()
 	.scaleExtent([0.05, 10])	// 1=>100%
@@ -335,6 +369,7 @@ function zoomed() {
 	$("#zoomLabel").text(zoom.scale().toPrecision(2));
 	inner.attr("transform", "translate(" + d3.event.translate + ")scale(" + d3.event.scale + ")");
 }
+
 
 var zooming = false;
 
@@ -387,45 +422,20 @@ var inner = d3.select("div#cells svg")
 	.append("g")
  		.attr("id", "inner");
 	
+var cellGroup = inner.append("g").attr("id", "cellGroup");
+var linkGroup = inner.append("g").attr("id", "linkGroup");
 
-var circles = inner.selectAll("circle")
-	.data(cells, function(n) { return n.index; })			// join node data with index
-	.enter()
-		.append("circle")
-			.attr("r", function(d) { return d.radius; })
-			.attr("x", function(d) { return d.x; })
-			.attr("y", function(d) { return d.y; })
-			.attr("fill", function(d) { return d.color; });
+var circles = cellGroup.selectAll("circle")
+	.data(cells, function(n) { return n.id; })			// join node data with id
+	.enter().append("circle")
+		.attr("r", function(d) { return d.radius; })
+		.attr("x", function(d) { return d.x; })
+		.attr("y", function(d) { return d.y; })
+		.attr("fill", function(d) { return d.color; });
 
 
 
 
-var addLinks = function() {
-	// calculate links from current cells
-	
-	links = [];
-	cells.map(function(cell) {
-		if (cell.parent && cell.index) {						// original cells don't have parents
-			links.push({'source': cell.parent, 'target': cell.index});
-		}
-	});
-
-	
-	force.links(links);
-	force.start();
-	
-	link = inner.selectAll("line.link")
-		.data(links)
-		.enter()
-			.append("line")
-				.attr("class", "link")
-					.attr("x1", function(d) { return d.source.x; })
-					.attr("y1", function(d) { return d.source.y; })
-					.attr("x2", function(d) { return d.target.x; })
-					.attr("y2", function(d) { return d.target.y; })
-					.style("stroke-width", function(d) { return d.size || 2; });
-
-}
 
 
 
@@ -440,8 +450,8 @@ force.on("tick", function(e) {
 var updateCellPosition = function() {
 	// nodes
 	circles
-		.attr("cx", function(n) { if (!n.kill) return n.x; })
-		.attr("cy", function(n) { if (!n.kill) return n.y; });
+		.attr("cx", function(n) { return n.x; })
+		.attr("cy", function(n) { return n.y; });
 		
 	// links
 	if (force.links().length > 0) {
@@ -452,18 +462,27 @@ var updateCellPosition = function() {
 			.attr("y2", function(d) { return d.target.y; })
 	}
 }
+
+
+
+
+	
+	
 /*
-var dragging = false;
-var circleElement;
-svg.selectAll("circle").on("mousedown", function(circle) {
-	console.log(circle);
+
+// var dragging = false;
+// var circleElement;
+inner.on("mousedown", function(c) {
 	root = circle;
 	root.fixed = true;
 	root.color = this.style["fill"];				// temp save node color
 	this.style["fill"] = "f00";						// highlight node	
 	circleElement = this;							// save handler for circle svg	
 	dragging = true;
+	
 });
+
+
 
 svg.on("mousemove", function() {
 	if (dragging) {
@@ -525,18 +544,19 @@ var interpolateNodeSize = function(node) {
 	var timer = d3.timer(function(t){
 		if (t>duration) {
 			node.radius = node.finalRadius;		// make sure the radius become the original radius
-			node.finalRadius = 0;			// delete node.finalRadius;			// remove finalRadius property
+			delete node.finalRadius;			// remove finalRadius property
 			return true; // true ends timer
 		}
 		node.radius = interpol(ease(t/duration));
 	});	
 }
 
-var varyColor = function(color) {
-	if (Math.random()-0.5 > 0) {
-		return color.darker(Math.random()/3);
+var varyColor = function(stringColor) {
+	var color = d3.rgb(stringColor);
+	if (Math.random() > 0.5) {
+		return color.darker(Math.random()/3).toString();		// return hex color, NOT d3.rgb object
 	} else {
-		return color.brighter(Math.random()/3);
+		return color.brighter(Math.random()/3).toString();
 	}
 }
 
@@ -647,6 +667,10 @@ $(document).ready(function() {
 		updateStreamData();
 	});	
 	
+	
+	circles.on("mousedown", function(c) {
+		console.log(c);
+	})
 });	
 
 
@@ -674,24 +698,35 @@ var updateSettings = function(that, key, label, settingName) {
 }
 
 var getInfo = function() {
-	var deadCells=[];
-	var now = cells[cells.length-1].born;
-	
 	for (var i=0; i<cells.length; i++) {
-		if (now >= cells[i].died ) {
-			deadCells.push(cells[i]);
-		}
+		console.log(i, cells[i].id, cells[i]);
 	}
-	console.log(deadCells);
 }
 
 var updateNodeDisplay = function(n) {
 	
 	force.charge(0);
 	
-	circles = inner.selectAll("circle")						// select
-		.data(cells, function(n) { return n.index; } );		// rebind with key
+	circles = cellGroup.selectAll("circle")						// select
+		.data(cells, function(n) { return n.id; } );		// rebind with key
 
+	force.nodes(cells, function(n) { return n.id; } );			// rebind new cells with force layout
+	
+	// create new link map
+	links = [];
+	cells.map(function(cell) {
+		var ancestor = findAncestor(cell);									// get ancestor cell from cached cells
+		if (ancestor !== false) {										// check if ancestor exists
+			if (cell.alive && ancestor.alive) {						// check if cell and parent are alive
+				links.push({'source': ancestor, 'target': cell});		// create link with objects
+			}
+		}
+	});
+	
+	
+	force.links(links, function(d,i) { i + "-" + d.source.id + "-" + d.target.id; });
+	force.start();
+	
 	circles.enter()											// enter
 		.append("circle")
 			.attr("r", 0)									// initial radius
@@ -705,24 +740,56 @@ var updateNodeDisplay = function(n) {
 				.each("start", function(n) { interpolateNodeSize(n); })
 			;	// update visuals
 	
-	circles.exit().remove();
+	//circles.exit().remove();
 		
-	/*	
 	circles.exit()
 		.transition()
-			.attr("fill", d3.rgb("#fff"))
 			.duration(199)				// match with delay time at adding cells..., or remove transition completely
 			.ease("cubic-in-out")
 			.attr("r", 0)
 		.remove();
-	*/
 	
-	force.start();
+	
+
+	link = linkGroup.selectAll("line.link")		
+		.data(links, function(d, i) { 
+			var unique = i + "-" + d.source.id + "-" + d.target.id;
+			return  unique; 
+		});
+
+	link.enter()
+		.append("line").attr("class", "link")
+		.attr("opacity", 0)
+		.attr("line-width", 0)
+		.transition()
+			.duration(800)
+			.attr("opacity", 1)
+			.attr("line-width", 2)
+	
+	link.exit().remove();			// remove when they no longer exist
+	
+	
+			
 	
 	$("#cellLabel").text(cells.length);
 	$("#timeLabel").text(cells[cells.length-1].born);
 	
 }
+
+
+// find closed ancestor of a cell. in cases when the parent died, create link to ancestor.
+var findAncestor = function(cell) {
+	var parentID = cell.parent;
+	while (parentID !== false) {
+		var ancestor = cachedCells[parentID];
+		if (ancestor.alive) {
+			return ancestor;
+		}
+		parentID = ancestor.parent
+	}	
+	return false;
+}
+
 
 
 
@@ -759,7 +826,7 @@ worker.onmessage = function(e) {
 // Single Inital Cell Object
 var Cell = function() {
 	var i = cells.length;
-	this.index = i;				// append to cells array
+	this.id = i;				// append to cells array
 	this.isStem = true;		// stem or normal... stem -> stem|normal, normal -> normal
 	this.subtype = i;			// initial subtypes
 	this.radius = 0;			// important to set initial radius to 0
@@ -810,6 +877,8 @@ var addInitialCells = function(nr) {
 
 
 
+var cachedCellCounter = settings.initialCells;
+
 var addAdditionalCells = function(nr) {
 	console.log(nr);
 	nr = cells.length + nr;
@@ -825,15 +894,16 @@ var addAdditionalCells = function(nr) {
 		
 	var intervalID = window.setInterval(function() {
 		
-
-		
 		// add cell
-		var cell = cachedCells[cells.length]; // !!! cells length is dynamic !!! when cells are removed, they are re-ADDED!!!
-		var parentCell = cells[cell.parent];
-		cell.color = varyColor(d3.rgb(parentCell.color));
+		var cell = cachedCells[cachedCellCounter]; 		// get next cached cell
+		cachedCellCounter++;							// increase cached cell counter
+		
+		var parentCell = cachedCells[cell.parent];		// get parent cell with cell.parent it from cachedCells, because cells[] position will change when cells die
+		cell.color = varyColor(parentCell.color);
 		cell.x = Math.cos(cell.randomAngle)*parentCell.radius + parentCell.x;
 		cell.y = Math.sin(cell.randomAngle)*parentCell.radius + parentCell.y;
 		cells.push(cell);
+		
 		
 		// check for dead cells and remove
 		
@@ -841,28 +911,21 @@ var addAdditionalCells = function(nr) {
 		var now = cell.born;		// get the current time from the current cell's birth time
 		$('#timeStep').text(now);
 		
-		
 		var cellsToDelete = [];
 		for (var i=0; i<cells.length; i++) {
 			if ((cells[i].died !== undefined) && (now >= cells[i].died)) {
 				cellsToDelete.push(i);
-				console.log("mark to delete", cells[i].index, i);
 				cells[i].alive = false;
 			}
 		}
-		console.log("updateNodeDisplay, before delete", cells.length, cellsToDelete);
 		for (var j = cellsToDelete.length-1; j>=0; j--) {
 			var d = cellsToDelete[j];
 			var deletedCell = cells.splice(d, 1); 
-			console.log("delete", d, deletedCell);
 		}
-		console.log("updateNodeDisplay, after delete", cells.length, cells.slice(0));
-
-	//	force.nodes(cells, function(n) { return n.index; } );			// rebind new cells with force layout
-		
 
 		updateNodeDisplay();
-		// updateStreamData();		
+		updateStreamData();
+		
 			
 		if (cells.length>=nr) clearInterval(intervalID);
 		
@@ -890,14 +953,13 @@ var streamDataOK = true;
 var streamType = "silhouette";
 var updateStreamData = function() {
 
-	
 	if (streamDataOK) {
 		streamDataOK = false;
 		var cell, lastCell,i,j,l;
 		var streamSlice = 200; 					// number of sampled timepoints
 		var lastCell = cells[cells.length-1];
 		var maxTime = lastCell.born+1;	      // get latest time, add 1
-		var last = lastCell.index;
+		var last = lastCell.id;
 	
 		steps = maxTime / streamSlice;
 	
@@ -911,8 +973,7 @@ var updateStreamData = function() {
 			}
 		}
 
-		for(i=0; i<last; i++) {
-		
+		for(i=0; i<cells.length; i++) {
 			cell = cells[i];
 			var bin = Math.floor(cell.born/steps);
 			streamData[cell.subtype][bin].y++;			// increase bin

@@ -1,34 +1,34 @@
 // Importing Libraries for Worker
+
+var settings = {
+	n: 20,						// total number of genes, including driver (d) and essential (e) genes
+	r: 0.01, 					// mutation probabiliy of each gene when replicated
+	d: 10, 						// number of driver genes, first d genes of g
+	e: 5,						// number of essential genes, number of genes
+	mutationRate: 0.01,
+	growthRate: 0.01,			// 0.0001
+	deathRate: 0.001,		
+	deathRateForNonStem: 0.001,
+	srp: 0.5,	// between 0 and 1
+	fitnessIncrease:5, 
+	maxNumberOfCells: 1000,
+	initialCells: 6,
+};
+
+var cells = [];
+
 if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
 	importScripts('science.v1.min.js');
 	importScripts('underscore-min.js');
 	importScripts('underscore-mixins.js');
 	importScripts('colorbrewer.js');
 	
-	var cells = [];
-	var settings;
+	
 	
 } else {
 	// debugging
 	// Single Inital Cell Object
-	
-	var settings = {
-		n: 20,						// total number of genes, including driver (d) and essential (e) genes
-		r: 0.01, 					// mutation probabiliy of each gene when replicated
-		d: 10, 						// number of driver genes, first d genes of g
-		e: 5,						// number of essential genes, number of genes
-		mutationRate: 0.01,
-		growthRate: 0.01,			// 0.0001
-		deathRate: 0.001,		
-		deathRateForNonStem: 0.001,
-		srp: 0.5,	// between 0 and 1
-		fitnessIncrease:5, 
-		maxNumberOfCells: 1000,
-		initialCells: 6,
-	};
-	
-	cells = [];
-	
+		
 	var initGenes = function(nr) {
 		var genes = [];
 		for(var i=0; i<nr; i++) {
@@ -36,9 +36,9 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
 		}
 		return genes;	
 	}
-	var StemCell = function() {
+	var Cell = function() {
 		var i = cells.length;
-		this.index = i;				// append to cells array
+		this.id = i;				// append to cells array
 		this.isStem = true;
 		this.subtype = i;			// initial subtypes
 		this.radius = 0;			// important to set initial radius to 0
@@ -61,12 +61,14 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
 	var initCells = function(nr) {
 		cells = [];
 		for(var i=0; i<nr; i++) {
-			cells.push(new StemCell());
+			cells.push(new Cell());
 		}
 	}
 
 	initCells(5);
 }
+
+
 
 // return list of dead cells
 
@@ -103,7 +105,6 @@ onmessage = function(e) {
 	
 	}
 	
-	
 }
 
 
@@ -115,8 +116,10 @@ var cellRadius = function() {
 }
 
 // Create a child Cell object from a parent Cell object
+var cellCounter = settings.initialCells;
+
 var Cell = function(parent) {
-	this.index = cells.length;				// append to cells array
+	this.id = cells.length;				// append to cells array
 	this.isStem = parent.isStem;				// stem or normal 
 	this.subtype = parent.subtype;			// propagate subtype
 	this.radius = 0;
@@ -126,8 +129,8 @@ var Cell = function(parent) {
 	this.died = undefined;				// timestep
 	this.born = time;					// timestep
 	this.randomAngle = Math.random()*Math.PI*2;
-	this.parent = parent.index;			// add parent id
-	parent.children.push(this.index);	// add child id to parent
+	this.parent = parent.id;			// add parent id
+	parent.children.push(this.id);	// add child id to parent
 	this.genes = parent.genes.slice(0);					// copy genes
 	this.driverGenes = parent.driverGenes.slice(0);		// copy parent driver genes
 	this.essentialGenes = parent.essentialGenes.slice(0);		// copy parent driver genes
@@ -167,7 +170,7 @@ var simulate = function(limit) {
 			}
 						
 			cell = cells[i];
-			
+
 			if (cell.died>=0) continue;	// skip if cell is dead
 			
 			// Remove
@@ -177,9 +180,7 @@ var simulate = function(limit) {
 		
 				
 			if ((dr < settings.deathRate) || (drns < settings.deathRateForNonStem)) {				// Death Rate
-				if (cell.index < 5) {
-					console.log("StemCell died " + cell.index);
-				}
+		
 				cell.died = time;		// time of death
 				if (info.aliveCells === 0) break simulationLoop;		// no more alive cells left...
 				continue;
@@ -188,7 +189,7 @@ var simulate = function(limit) {
 			// Mutate & Replicate
 			if (Math.random() < (getFitness(cell) * settings.growthRate)) {
 				// mutate(cell); mutationg happens in new Cell()		
-				var childCell = new Cell(cell);		// copy cell
+				var childCell = new Cell(cell);		// copy cell, id is cell length
 				
 				// if cell is stem cell and random() is larger than srp, create a normal cell
 				if (cell.isStem && (Math.random() > settings.srp)) {
@@ -199,10 +200,10 @@ var simulate = function(limit) {
 					childCell.alive = false; 	// update alive status
 					childCell.died = time;		// time of death
 			
-				} else {
-					// stem cells and normal cell have the same genome!? only difference is the isStem bit
-					cells.push(childCell);	
-				}
+				} 
+				// stem cells and normal cell have the same genome!? only difference is the isStem bit
+				
+				cells.push(childCell);
 				
 			}		
 			
@@ -276,7 +277,7 @@ var updateInfo = function() {
 		/*
 		// create Links
 		if (cell.parent) {		// original cells don't have parents
-			links.push({'source': cell.parent, 'target': cell.index});
+			links.push({'source': cell.parent, 'target': cell.id});
 		}
 		*/
 	}
@@ -342,9 +343,9 @@ var findRoot = function(id) {
 	
 	while (cell.parent) {
 		cell = cells[cell.parent];
-		rootPath.unshift(cell.index);
+		rootPath.unshift(cell.id);
 	}
-	console.log("root: " + cell.index, cell);
+	console.log("root: " + cell.id, cell);
 	
 	console.timeEnd("find root");
 	return rootPath;
@@ -362,8 +363,8 @@ var findChildren = function(id) {
 
 	for (var i=id; i<cells.length; i++) {
 		var childCell = cells[i];
-		if (childCell.parent === parentCell.index) {
-			childPath.push(childCell.index);
+		if (childCell.parent === parentCell.id) {
+			childPath.push(childCell.id);
 			childPath.push(findChildren());
 		}
 	}
