@@ -295,7 +295,7 @@ var getSettings = function() {
 			deathRateForNonStem: 0.01,
 			srp: 0.1,	//s ymmetricReplicationProbablity
 			fitnessIncrease: 5, 
-			maxNumberOfCells: 1000,
+			maxNumberOfCells: 10000,
 			initialCells: 6,
 		};
 	}
@@ -1027,6 +1027,63 @@ var updateStreamData = function() {
 
 
 /* - - - - - - - - - Create Inital Cells  End - - - - - - - - - */
+
+
+
+/* - - - - - - - - - Summarize Cells - - - - - - - - - */
+
+var summary = {};
+summary.cells = [];
+summary.map = [];
+summary.cutoffCells = [];
+
+// reduce driver genes
+summary.reduce = function() {
+	// create and index of genetically same cells
+	summary.cells = [];
+	summary.map = [];
+	for (var i=0; i<cachedCells.length; i++) {
+		var genes = cachedCells[i].driverGenes;
+		genes = genes.toString().replace(/\d+/g, "1").replace(/false/g, "0").replace(/,/g, "");	// genes array to binary string
+		genes = parseInt(genes,2); 							// binary string to decimal number
+		if (summary.cells[genes] === undefined) {
+			summary.cells[genes] = [i];	// new array with intial cell id
+			summary.map.push(genes)
+		} else if (summary.cells.length > 0) {
+			summary.cells[genes].push(i);
+		}
+	}
+	summary.length = this.map.length;
+}
+summary.getCellsByGene = function(geneArray) {
+	var gene = geneArray.toString().replace(/\d+/g, "1").replace(/false/g, "0").replace(/,/g, "");
+	gene = parseInt(gene,2);
+	return summary.cells[gene];
+}
+summary.getCells = function(i) {
+	return summary.cells[summary.map[i]];
+}
+
+summary.cluster = function() {
+	// http://harthur.github.io/clusterfck/#neural-network
+	// http://mus.org.uk/teapot/clustering-in-javascript/
+	// https://github.com/harthur/clusterfck
+}
+
+summary.cutoff = function(threshold) {
+	summary.cutoffCells = [];
+	if (threshold === undefined) threshold = 0;
+	summary.map.forEach(function(key, i) {
+	//	console.log(key, i);
+		
+		var c = summary.getCells(i)
+		if (c.length > threshold) {
+			summary.cutoffCells[key] = c;
+		}
+	});
+}
+
+/* - - - - - - - - - Summarize Cells  End - - - - - - - - - */
 
 
 
