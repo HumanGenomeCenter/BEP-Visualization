@@ -1,20 +1,44 @@
 
 
-var cells = [];  // Create a nested structure for cells
-
-
 var simulation = {
-	info: {}
+	info: {},
+	cells: [],
 };
 
-var time = 0;
+simulation.reset = function() {
+	simulation.info = {};
+	simulation.cells = deepCopy(initialCellsCopy);	// copy initial cells
+}
+
+var summary = {
+	cellsByGene: [],
+	map: [],
+	cutoffCells: [],
+	cells: [],
+	scaleFactor: 1.01, 	// for scaling summary cells	
+};
+
+
+summary.reset = function() {
+	summary.cellsByGene = [];
+	summary.map = [];
+	summary.cutoffCells = [];
+	summary.cells = [];
+}
+
+summary.replay = function() {
+	if (summary.cellsCopy) {
+		summary.cells = deepCopy(summary.cellsCopy);
+	}
+}
+
+
 
 
 // Mutate Cells
 var Cell = function(parent) {
 		
-	var i = cells.length;
-	this.id = i;				// append to cells array
+	// append to cells array
 	this.radius = 0;
 	this.finalRadius = 12;		// randomize radius? Math.floor(Math.random() * 5 + 10);
 	this.children = [];
@@ -22,10 +46,12 @@ var Cell = function(parent) {
 	this.alive = true;
 	this.died = undefined;				// timestep
 	this.randomAngle = Math.random()*Math.PI*2;
-	
 	this.sameDriverGenes = [];
+	this.summary = {};
 	
 	if (parent === undefined) {
+		var i = cells.length;
+		this.id = i;
 		this.parent = false;	// root, no parents
 		this.isStem = true;		// stem or normal... stem -> stem|normal, normal -> normal
 						// timestep
@@ -39,6 +65,9 @@ var Cell = function(parent) {
 			this.x = Math.cos(this.randomAngle)*neighbourCell.radius + neighbourCell.x;
 			this.y = Math.sin(this.randomAngle)*neighbourCell.radius + neighbourCell.y;		
 		}
+		//console.log("cell",i,this.x, this.y);
+
+		this.summary.parent = false;
 		
 		this.driverGenes = d3.range(settings.d).map(function() { return false; });			// false -> not mutated
 		this.essentialGenes = d3.range(settings.e).map(function() { return false; })
@@ -46,25 +75,16 @@ var Cell = function(parent) {
 		
 	} else {
 		
+		var i = simulation.cells.length;
+		this.id = i;
 		this.parent = parent.id;			// add parent id
-		parent.children.push(this.id);	// add child id to parent
-		
-		console.log("parent", parent.subtype, parent.id);
-		
+		parent.children.push(this.id);	// add child id to parent	
 		this.subtype = parent.subtype;			// initial subtypes
-		
-		this.color = simulation.varyColor(parent.color);
-		
-	//	this.x = Math.cos(parent.randomAngle)*parent.radius + parent.x;
-	//	this.y = Math.sin(parent.randomAngle)*parent.radius + parent.y;
-		
 		this.genes = parent.genes.slice(0);					// copy genes
 		this.driverGenes = parent.driverGenes.slice(0);		// copy parent driver genes
 		this.essentialGenes = parent.essentialGenes.slice(0);		// copy parent driver genes
 		simulation.mutate(this);
-		
 	}
-	
 }
 
 
@@ -91,44 +111,52 @@ simulation.varyColor = function(stringColor) {
 
 
 simulation.start = function() {
-	console.log("starting simulation, settings:", settings);
-	time = 0;
+	
+	simulation.reset();	
+	summary.reset();
+	
+	console.log("\nStarting Simulation, Settings:", settings);
+	
 	var info = simulation.info;
-	// empty & re-populate
-	/*
-	cells = [];
-	for(var i=0; i<settings.n; i++) {
-		cells.push(new Cell());
-	}
-	*/
+	var limit = settings.maxNumberOfCells;		// set limit	
 	
-	// set limit
-	var limit = settings.maxNumberOfCells;
-	
+	var previousLength;
 	
 	simulationLoop: 		// while loop label
 	while(true) {
 		var cell, i;
-		var length = cells.length;		// get new length
-
+		
+		var length = simulation.cells.length;		// get new length
+		
+		if (time %1000 === 0) {
+			console.log("time:", time, "length", length, limit);
+			
+			if (previousLength === length) {
+				console.log("previousLength === length");
+				break simulationLoop;
+			}
+			previousLength = length;
+		}
+		
+		if (time > 100000) {
+			break simulationLoop;
+		}
+		
 		for (i=0; i<length; i++) {		// loop over cells
 			
-			if (cells.length === limit) {							//  break when the desired number of cells are reached
+			if (simulation.cells.length === limit) {							//  break when the desired number of cells are reached
+				console.log("Simulation reached limit.");
 				break simulationLoop;
 			}
 						
-			cell = cells[i];
+			cell = simulation.cells[i];
 
 			if (cell.died>=0) continue;	// skip if cell is dead
-			
-			// Remove
-		
+					
 			var dr = Math.random();
 			var drns = Math.random();
-		
 				
 			if ((dr < settings.deathRate) || (drns < settings.deathRateForNonStem)) {				// Death Rate
-		
 				cell.died = time;		// time of death
 				if (info.aliveCells === 0) break simulationLoop;		// no more alive cells left...
 				continue;
@@ -147,19 +175,23 @@ simulation.start = function() {
 				if (simulation.getFitness(childCell) < 0) {
 					childCell.alive = false; 	// update alive status
 					childCell.died = time;		// time of death
-			
 				} 
 				// stem cells and normal cell have the same genome!? only difference is the isStem bit
 				
-				cells.push(childCell);
+				simulation.cells.push(childCell);
 			}		
 			
 		}
 		time++;			// advance time on tick
 	}
 	
-	simulation.updateInfo();
+	console.log("Simulation finished:", simulation.cells.length, "Cells");
 	console.timeEnd("simulation");
+
+	summary.reduce();
+	
+	simulation.updateInfo();
+	
 }
 
 
@@ -209,8 +241,8 @@ simulation.updateInfo = function() {
 	normalCells = 0;
 //	links = [];
 	
-	for (var i=0; i<cells.length; i++) {
-		var cell = cells[i];
+	for (var i=0; i<simulation.cells.length; i++) {
+		var cell = simulation.cells[i];
 		if (cell.alive) {
 			aliveCells++;	
 		} else {
@@ -218,24 +250,15 @@ simulation.updateInfo = function() {
 		}
 		if (cell.isStem) stemCells++;
 		if (!cell.isStem) normalCells++;
-		
-		/*
-		// create Links
-		if (cell.parent) {		// original cells don't have parents
-			links.push({'source': cell.parent, 'target': cell.id});
-		}
-		*/
 	}
 	
-	simulation.info.allCells = cells.length;
+	simulation.info.allCells = simulation.cells.length;
 	simulation.info.aliveCells = aliveCells;
 	simulation.info.deadCells = deadCells;
 	simulation.info.stemCells = stemCells;
 	simulation.info.normalCells = normalCells;
-//	simulation.info.links = links;
 	
-	summary.reduce();
-	console.timeEnd("updateInfo");
+//	console.timeEnd("updateInfo");
 }
 
 
@@ -245,57 +268,59 @@ simulation.updateInfo = function() {
 
 /* - - - - - - - - - Summarize Cells - - - - - - - - - */
 
-var summary = {};
-summary.cellsByGene = [];
-summary.map = [];
-summary.cutoffCells = [];
-summary.cells = [];
+
 
 // reduce driver genes
 summary.reduce = function() {
 	// create and index of genetically same cells
 	summary.cellsByGene = [];
 	summary.map = [];
-	for (var i=0; i<cells.length; i++) {
-		var genes = cells[i].driverGenes;
-		genes = genes.toString().replace(/\d+/g, "1").replace(/false/g, "0").replace(/,/g, "");	// genes array to binary string
-		genes = parseInt(genes,2); 							// binary string to decimal number
+	for (var i=0; i<simulation.cells.length; i++) {
+		var cell = simulation.cells[i];
+		var genes = summary.driverGenesToBinary(cell);	// binary string to decimal number
 		if (summary.cellsByGene[genes] === undefined) {
 			summary.cellsByGene[genes] = [i];	// new array with intial cell id
 			summary.map.push(genes);
-			
-
-			summary.cells.push(cells[i]);
-			
+			cell.summary.steps = {};
+			cell.summary.steps[summary.cells.length] = true;
+			cell.summary.id = summary.cells.length;
+			summary.cells.push(cell);
 			
 		} else {
 			summary.cellsByGene[genes].push(i);
 			
 			var initialCellID = summary.cellsByGene[genes][0];
-			var sameDriverCell = cells[initialCellID];
+			var sameDriverCell = simulation.cells[initialCellID];
 			sameDriverCell.sameDriverGenes.push(i);
-			
+			sameDriverCell.summary.steps[summary.cells.length] = true;
+			sameDriverCell.finalRadius = sameDriverCell.finalRadius * summary.scaleFactor;
 		}
 	}
+
+	simulation.findSummaryParents();
+
 	
-	// map radius to same driver cells
-	for (var i=0; i<summary.cells.length; i++) {
-		var cell = summary.cells[i];
-		cell.finalRadius = cell.sameDriverGenes.length / Math.PI;
-	}
-
-
 	summary.length = this.map.length;
+	summary.cellsCopy = deepCopy(summary.cells);
+	console.log("Summary finished:", summary.cells.length, "Cells");
 	
-	console.log(summary);
 }
+
+// broken
 summary.getCellsByGene = function(geneArray) {
-	var gene = geneArray.toString().replace(/\d+/g, "1").replace(/false/g, "0").replace(/,/g, "");
+	var gene = summary.genesToBinary(geneArray);
 	gene = parseInt(gene,2);
 	return summary.cellsByGene[gene];
 }
 summary.getCells = function(i) {
 	return summary.cellsByGene[summary.map[i]];
+}
+
+summary.driverGenesToBinary = function(cell) {
+	var genes = cell.driverGenes.toString().replace(/\d+/g, "1").replace(/false/g, "0").replace(/,/g, "");
+	genes = genes + cell.subtype.toString(2);	// add unique subtype as binary string
+	genes = parseInt(genes,2);
+	return genes;
 }
 
 summary.cluster = function() {
@@ -317,6 +342,9 @@ summary.cutoff = function(threshold) {
 	});
 }
 
+
+
+
 /* - - - - - - - - - Summarize Cells  End - - - - - - - - - */
 
 
@@ -328,33 +356,45 @@ summary.cutoff = function(threshold) {
 
 
 simulation.findRoot = function(id) {
-	console.time("find root");
+//	console.time("find root");
 	var rootPath = [];
-	var cell = cells[id];
-	console.log("parent", cell.parent);
+	var cell = simulation.cells[id];
+//	console.log("parent", cell.parent);
 	
 	while (cell.parent) {
-		cell = cells[cell.parent];
+		cell = simulation.cells[cell.parent];
 		rootPath.unshift(cell.id);
 	}
-	console.log("root: " + cell.id, cell);
-	
-	console.timeEnd("find root");
+//	console.log("root: " + cell.id, cell);
+//	console.timeEnd("find root");
 	return rootPath;
 }
+
+simulation.findSummaryParents = function() {
+	for (var i=0; i<summary.cells.length; i++) {
+		// reverse loop through summary cells
+		var parentID = summary.cells[i].parent;	// get parent ID
+		if (parentID === false) continue;
+		var parentDriverGenes = summary.driverGenesToBinary(simulation.cells[parentID]);		// get parent Gene as Number
+		summary.map.map(function(cell, j) {
+			var driverGenes = summary.driverGenesToBinary(summary.cells[j]);
+			if (parentDriverGenes === driverGenes) {
+				summary.cells[i].summary.parent = j;
+			}
+		});
+	}
+}
+
 
 
 
 simulation.findChildren = function(id) {
 	// brute force
-	
 	var childPath = [];
-	
-	var parentCell = cells[id];
+	var parentCell = simulation.cells[id];
 
-
-	for (var i=id; i<cells.length; i++) {
-		var childCell = cells[i];
+	for (var i=id; i<simulation.cells.length; i++) {
+		var childCell = simulation.cells[i];
 		if (childCell.parent === parentCell.id) {
 			childPath.push(childCell.id);
 			childPath.push(findChildren());
@@ -366,4 +406,8 @@ simulation.findChildren = function(id) {
 }
 
 
+
+var deepCopy = function(obj) {
+	return JSON.parse(JSON.stringify(obj));
+}
 

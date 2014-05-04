@@ -1,7 +1,6 @@
 $(document).ready(function() {
 	
 	$("#simulate").click(function() {
-		console.log("simulate");
 		simulation.start();
 		// don't use workers for now...
 		// worker.postMessage(JSON.stringify({'message':'startSimulation', 'settings':settings, 'cells':cells}));
@@ -14,16 +13,19 @@ $(document).ready(function() {
 		addAdditionalCells();
 	});
 	
-	$("#resetSimulation").click(function() {
+	$("#replaySimulation").click(function() {
 		simulating = false;
-		console.log("reset");
+		console.log("replay");
 				
-		cells = [];
-		updateNodeDisplay()
-				
-		window.setTimeout(function() {
-			addInitialCells();
-		}, 1000);
+		reset();
+		updateNodeDisplay();
+		
+		addInitialCells(function() {
+			console.log("next");
+			summary.replay();
+			simulating = true;
+			addAdditionalCells();
+		});
 	});
 
 	
@@ -45,7 +47,6 @@ $(document).ready(function() {
 	$("#zoomReset").click(function() {
 		zoomBehaviour('reset');
 	});
-	
 	
 	circles.on("mousedown", function(c) {
 		console.log(c);

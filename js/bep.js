@@ -14,16 +14,10 @@ var height = 500;
 
 /* - - - - - - - - -  Settings End - - - - - - - - -  */
 
-
-
-
-
+var time = 0;
 var simulating = false;
-
-
-
-var cells = [];			// displayed cells
-var cachedCells = []	// chached cells from webworker
+var cells = [];
+var cachedCellCounter;
 
 var force = d3.layout.force()
 	.size([width, height])
@@ -254,6 +248,7 @@ var updateNodeDisplay = function(n) {
 
 	force.nodes(cells, function(n) { return n.id; } );			// rebind new cells with force layout
 	
+	/*
 	// create new link map
 	links = [];
 	cells.map(function(cell) {
@@ -264,9 +259,10 @@ var updateNodeDisplay = function(n) {
 			}
 		}
 	});
+	*/
 	
 	
-	force.links(links, function(d,i) { i + "-" + d.source.id + "-" + d.target.id; });
+//	force.links(links, function(d,i) { i + "-" + d.source.id + "-" + d.target.id; });
 	force.start();
 	
 	circles.enter()											// enter
@@ -293,7 +289,7 @@ var updateNodeDisplay = function(n) {
 		.remove();
 	
 	
-
+/*
 	link = linkGroup.selectAll("line.link")		
 		.data(links, function(d, i) { 
 			var unique = i + "-" + d.source.id + "-" + d.target.id;
@@ -310,9 +306,8 @@ var updateNodeDisplay = function(n) {
 			.attr("line-width", 2)
 	
 	link.exit().remove();			// remove when they no longer exist
+	*/
 	
-	
-			
 	
 	if (cells.length>0) {
 		$("#cellLabel").text(cells.length);
@@ -364,41 +359,41 @@ var removeCell = function(nr) {
 	updateNodeDisplay();
 }
 
-var addInitialCells = function() {
+var initialCellsCopy;
+var addInitialCells = function(next) {
+	console.log("addInitialCells");
 	cells = [];
 	var intervalID = window.setInterval(function() {
 		addCell();
-		if (cells.length>=settings.initialCells) clearInterval(intervalID);
-	}, 200);	
-};	// execute immeditaly
-//addInitialCells();
+		if (cells.length>=settings.initialCells) {
+			clearInterval(intervalID);
+			initialCellsCopy = deepCopy(cells);
+			if (next) next();	// if exists, execute passed function
+		}
+	}, 300);
+
+};
 
 
-var cachedCellCounter = settings.initialCells;
 
 
-var addAdditionalCells = function() {
+var addAdditionalCells = function(limit) {
 
-	var cells = summary.cells;
-	if (cells.length<1) return;
-	if (simulating) return;
-
-	
 	var delay = 200;
 	force.charge(0); // neutralize force
 		
 	var intervalID = window.setInterval(function() {
 		
 		// add cell
-		var cell = cachedCells[cachedCellCounter]; 		// get next cached cell
+		var cell = summary.cells[cachedCellCounter]; 		// get next cached cell
 		cachedCellCounter++;							// increase cached cell counter
 		
-		var parentCell = cachedCells[cell.parent];		// get parent cell with cell.parent it from cachedCells, because cells[] position will change when cells die
-		cell.color = varyColor(parentCell.color);
+		var parentCell = summary.cells[cell.summary.parent];		// get parent cell with cell.parent it from cachedCells, because cells[] position will change when cells die
+	
+		cell.color = simulation.varyColor(parentCell.color);
 		cell.x = Math.cos(cell.randomAngle)*parentCell.radius + parentCell.x;
 		cell.y = Math.sin(cell.randomAngle)*parentCell.radius + parentCell.y;
 		cells.push(cell);
-		
 		
 		// check for dead cells and remove
 		
@@ -406,6 +401,7 @@ var addAdditionalCells = function() {
 		var now = cell.born;		// get the current time from the current cell's birth time
 		$('#timeStep').text(now);
 		
+		/*
 		var cellsToDelete = [];
 		for (var i=0; i<cells.length; i++) {
 			if ((cells[i].died !== undefined) && (now >= cells[i].died)) {
@@ -417,12 +413,15 @@ var addAdditionalCells = function() {
 			var d = cellsToDelete[j];
 			var deletedCell = cells.splice(d, 1); 
 		}
-
+		*/
 		updateNodeDisplay();
 		
-			
-		if (cells.length>=nr) clearInterval(intervalID);
+		// stop adding cells
+		if (cells.length>=summary.cells.length) clearInterval(intervalID);
 		
+		// add limited cells for testing
+		if (cachedCellCounter > limit) clearInterval(intervalID);
+			
 	}, delay);
 	simulating = false;
 }
@@ -430,6 +429,24 @@ var addAdditionalCells = function() {
 function stopSimulation() {
 	clearInterval(intervalID);
 }
+
+
+
+
+var reset = function() {
+	time = 0;
+	simulating = false;
+	cells = [];			// displayed cells
+	cachedCellCounter = settings.initialCells;
+}
+
+reset();
+addInitialCells();		// add at load
+
+
+
+
+
 
 
 
