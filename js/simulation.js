@@ -46,7 +46,6 @@ var Cell = function(parent) {
 	this.alive = true;
 	this.died = undefined;				// timestep
 	this.randomAngle = Math.random()*Math.PI*2;
-	this.sameDriverGenes = [];
 	this.summary = {};
 	
 	if (parent === undefined) {
@@ -128,6 +127,7 @@ simulation.start = function() {
 		
 		var length = simulation.cells.length;		// get new length
 		
+		// to prevent simulation running too long...
 		if (time %1000 === 0) {
 			console.log("time:", time, "length", length, limit);
 			
@@ -157,8 +157,13 @@ simulation.start = function() {
 			var drns = Math.random();
 				
 			if ((dr < settings.deathRate) || (drns < settings.deathRateForNonStem)) {				// Death Rate
+				cell.alive = false;		// set alive status to false
 				cell.died = time;		// time of death
-				if (info.aliveCells === 0) break simulationLoop;		// no more alive cells left...
+
+				if (info.aliveCells === 0) { 
+					console.log("No more cells alive.");
+					break simulationLoop;		// no more alive cells left...
+				}
 				continue;
 			}
 			
@@ -170,12 +175,15 @@ simulation.start = function() {
 				// if cell is stem cell and random() is larger than srp, create a normal cell
 				if (cell.isStem && (Math.random() > settings.srp)) {
 					childCell.isStem = false;		// -> normal cell
+				} else {
+					childCell.isStem = true;		// -> stem cell
 				}
 				
 				if (simulation.getFitness(childCell) < 0) {
 					childCell.alive = false; 	// update alive status
 					childCell.died = time;		// time of death
 				} 
+				
 				// stem cells and normal cell have the same genome!? only difference is the isStem bit
 				
 				simulation.cells.push(childCell);
@@ -281,24 +289,21 @@ summary.reduce = function() {
 		if (summary.cellsByGene[genes] === undefined) {
 			summary.cellsByGene[genes] = [i];	// new array with intial cell id
 			summary.map.push(genes);
-			cell.summary.steps = {};
-			cell.summary.steps[summary.cells.length] = true;
+			cell.summary.steps = [{'summaryID': summary.cells.length,'simulationID':i}];
 			cell.summary.id = summary.cells.length;
 			summary.cells.push(cell);
 			
 		} else {
 			summary.cellsByGene[genes].push(i);
-			
 			var initialCellID = summary.cellsByGene[genes][0];
 			var sameDriverCell = simulation.cells[initialCellID];
-			sameDriverCell.sameDriverGenes.push(i);
-			sameDriverCell.summary.steps[summary.cells.length] = true;
+			sameDriverCell.summary.steps.push({'summaryID': summary.cells.length, 'simulationID':i})
 			sameDriverCell.finalRadius = sameDriverCell.finalRadius * summary.scaleFactor;
 		}
 	}
 
-	simulation.findSummaryParents();
-
+	summary.findSummaryParents();
+//	summary.createChanges();
 	
 	summary.length = this.map.length;
 	summary.cellsCopy = deepCopy(summary.cells);
@@ -342,7 +347,54 @@ summary.cutoff = function(threshold) {
 	});
 }
 
+summary.getGenes = function(summaryCellID) {
+	// get a summary of genes & driver genes from a summary cell
+	// loop over related cells & average genes
+	
+}
 
+summary.findSummaryParents = function() {
+	for (var i=0; i<summary.cells.length; i++) {
+		// reverse loop through summary cells
+		var parentID = summary.cells[i].parent;	// get parent ID
+		if (parentID === false) continue;
+		var parentDriverGenes = summary.driverGenesToBinary(simulation.cells[parentID]);		// get parent Gene as Number
+		summary.map.map(function(cell, j) {
+			var driverGenes = summary.driverGenesToBinary(summary.cells[j]);
+			if (parentDriverGenes === driverGenes) {
+				summary.cells[i].summary.parent = j;
+			}
+		});
+	}
+}
+
+
+summary.createChanges = function() {
+	
+	// initate summary.changes with empty arrays
+	var changes = [];	//summary.cells.map(function() { return []; });
+	
+	
+	for (var i=0; i<summary.cells.length; i++) {
+		var cell = summary.cells[i];
+		for (var j=0; j<cell.summary.steps.length; j++) {
+			var step = cell.summary.steps[j];
+			
+			if (!changes[step.summaryID]) changes[step.summaryID] = [];
+			
+	
+			changes[step.summaryID].push({
+				'summaryID':cell.id,
+				'action': 'add',	// remove
+				'simulationID': step.simulationID
+			});
+		} 
+	}
+	
+	console.log(changes);
+	
+
+}
 
 
 /* - - - - - - - - - Summarize Cells  End - - - - - - - - - */
@@ -370,20 +422,6 @@ simulation.findRoot = function(id) {
 	return rootPath;
 }
 
-simulation.findSummaryParents = function() {
-	for (var i=0; i<summary.cells.length; i++) {
-		// reverse loop through summary cells
-		var parentID = summary.cells[i].parent;	// get parent ID
-		if (parentID === false) continue;
-		var parentDriverGenes = summary.driverGenesToBinary(simulation.cells[parentID]);		// get parent Gene as Number
-		summary.map.map(function(cell, j) {
-			var driverGenes = summary.driverGenesToBinary(summary.cells[j]);
-			if (parentDriverGenes === driverGenes) {
-				summary.cells[i].summary.parent = j;
-			}
-		});
-	}
-}
 
 
 
@@ -409,5 +447,15 @@ simulation.findChildren = function(id) {
 
 var deepCopy = function(obj) {
 	return JSON.parse(JSON.stringify(obj));
+}
+
+
+var checkAlive = function() {
+	for (var i=0; i<simulation.cells.length; i++) {
+		var cell = simulation.cells[i];
+		if (!cell.alive && (cell.born !== cell.died)) {
+			console.log(i, "alive", cell.alive, "born", cell.born, "died", cell.died);
+		}
+	}
 }
 

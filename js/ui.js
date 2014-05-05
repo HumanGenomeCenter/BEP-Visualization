@@ -48,7 +48,5 @@ $(document).ready(function() {
 		zoomBehaviour('reset');
 	});
 	
-	circles.on("mousedown", function(c) {
-		console.log(c);
-	})
+
 });	

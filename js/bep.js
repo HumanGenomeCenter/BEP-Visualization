@@ -115,13 +115,17 @@ var inner = d3.select("div#cells svg")
 var cellGroup = inner.append("g").attr("id", "cellGroup");
 var linkGroup = inner.append("g").attr("id", "linkGroup");
 
-var circles = cellGroup.selectAll("circle")
+/*
+var circles = cellGroup.selectAll("g.circle")
 	.data(cells, function(n) { return n.id; })			// join node data with id
-	.enter().append("circle")
+	.enter().append("g").attr("class", "circle")
+		.append("circle")
 		.attr("r", function(d) { return d.radius; })
 		.attr("x", function(d) { return d.x; })
 		.attr("y", function(d) { return d.y; })
 		.attr("fill", function(d) { return d.color; });
+
+*/
 
 force.on("tick", function(e) {
 	var q = d3.geom.quadtree(cells),
@@ -133,11 +137,19 @@ force.on("tick", function(e) {
  
 var updateCellPosition = function() {
 	// nodes
-	circles
+	// g elements
+	circleGroups
+		.attr("transform", function(n) { return "translate("+ n.x +","+ n.y +")" });
+	
+	
+	/*
+	// circle svg elements
+	circleGroups
 		.attr("cx", function(n) { return n.x; })
 		.attr("cy", function(n) { return n.y; });
-		
+	*/
 	// links
+	/*
 	if (force.links().length > 0) {
 		link
 			.attr("x1", function(d) { return d.source.x; })
@@ -145,6 +157,7 @@ var updateCellPosition = function() {
 			.attr("x2", function(d) { return d.target.x; })
 			.attr("y2", function(d) { return d.target.y; })
 	}
+	*/
 }
 
 
@@ -243,8 +256,8 @@ var updateNodeDisplay = function(n) {
 	
 	force.charge(0);
 	
-	circles = cellGroup.selectAll("circle")						// select
-		.data(cells, function(n) { return n.id; } );		// rebind with key
+	circleGroups = cellGroup.selectAll("g.circles")						// select
+		.data(cells, function(n) { return n.id; } );			// rebind with key
 
 	force.nodes(cells, function(n) { return n.id; } );			// rebind new cells with force layout
 	
@@ -264,7 +277,7 @@ var updateNodeDisplay = function(n) {
 	
 //	force.links(links, function(d,i) { i + "-" + d.source.id + "-" + d.target.id; });
 	force.start();
-	
+	/*
 	circles.enter()											// enter
 		.append("circle")
 			.attr("r", 0)									// initial radius
@@ -277,11 +290,28 @@ var updateNodeDisplay = function(n) {
 				.attr("r", function(n) { return n.finalRadius; })
 				.each("start", function(n) { interpolateNodeSize(n); })
 			;	// update visuals
-	
-	//circles.exit().remove();
-		
-	
-	circles.exit()
+	*/	
+	newCircles = circleGroups.enter()											// enter
+		.append("g")
+			.attr("class", "circles")
+			.attr("transform", function(n) { return "translate("+ n.x +","+ n.y +")" });
+		//	.attr("x", function(n) { return n.x; })
+		//	.attr("y", function(n) { return n.y; })
+
+	newCircles
+		.append("circle")
+			.attr("r", 0)									// initial radius
+			.attr("fill", function(n) {return n.color})
+			.transition()
+				.duration(1000)
+				.ease("cubic-in-out")		// match with interpolateNodeSize()
+				.attr("r", function(n) { return n.finalRadius; })
+				.each("start", function(n) { interpolateNodeSize(n); })
+			;	// update visuals
+
+
+
+	circleGroups.exit()
 		.transition()
 			.duration(199)				// match with delay time at adding cells..., or remove transition completely
 			.ease("cubic-in-out")
