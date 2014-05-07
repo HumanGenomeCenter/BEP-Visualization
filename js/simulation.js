@@ -328,6 +328,14 @@ summary.driverGenesToBinary = function(cell) {
 	return genes;
 }
 
+summary.genesToValues = function(cell) {
+	var all = cell.driverGenes.concat(cell.genes);
+	return all.map(function(g) { 
+		if (g === false) return 0;
+		return 1;
+	});
+}
+
 summary.cluster = function() {
 	// http://mus.org.uk/teapot/clustering-in-javascript/
 	// https://github.com/harthur/clusterfck

@@ -6,7 +6,7 @@ var animation = {};
 animation.counter = 0;
 
 animation.saveFrame = function(svgID) {
-	if svgID === undefined svgID = "#forceCells";		// default to svg#forceCells
+	if (svgID === undefined) svgID = "#forceCells";		// default to svg#forceCells
 	
 	// add backslashes to prevent PHP parsing
 	var doctype = '<\?xml version="1.0" standalone="no"\?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">';

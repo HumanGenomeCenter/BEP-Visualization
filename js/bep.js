@@ -371,10 +371,10 @@ var updateNodeDisplay = function(n) {
 
 // define arcLayout
 var arcLayout = function() {
-	var g = 100;
+	var g = 95;
 	var d = 15;
 	var layout = d3.range(g).map(function(a,i){
-		if (i<d) return 4/g;	// double width of first d genes
+		if (i<d) return 3/g;	// double width of first d genes
 		return 1/g;
 	});
 	return layout;
@@ -394,9 +394,13 @@ var createPolarChart = function(element) {
 		.data([arcLayout])			// pie angles
 		.attr("class", "container");
 	
+	// gene data
+	var geneLevel = summary.genesToValues(cell);
+	/*
 	var geneLevel = d3.range(100).map(function() {
 		return Math.random();
 	});
+	*/
 	
 	radius = cell.finalRadius;
 	var arcs = container.selectAll("path.segment")
@@ -404,16 +408,19 @@ var createPolarChart = function(element) {
 	  .enter()
 		.append("path")
 	 	.attr("class", "segment")
-		.attr("fill", function(d,i) { return cell.color })
+		.attr("fill", function(d,i) { 
+			if (i>15) return d3.rgb(cell.color).brighter();
+			return d3.rgb(cell.color).darker();
+		})
 	    .attr("d", d3.svg.arc()
-			.innerRadius(0)
-			.outerRadius(0))
+			.innerRadius(radius/3+1)
+			.outerRadius(radius/3+1))
 		.attr("fill-opacity", 0)
 		.transition()
 			.delay(1000)
 			.duration(1000)
-			.attr("fill-opacity", function(d,i) { return geneLevel[i] })
-			.attr("d", d3.svg.arc()
+			.attr("fill-opacity", function(d,i) { return geneLevel[i] })	// fade in
+			.attr("d", d3.svg.arc()		// scale
 				.innerRadius(radius/3+1)
 				.outerRadius(function(d,i) { return radius/3 + (radius*2/3) * geneLevel[i] }))
 		
