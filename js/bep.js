@@ -214,7 +214,7 @@ function collide(node) {
 			var x = node.x - quad.point.x,
 			y = node.y - quad.point.y,
 			l = Math.sqrt(x * x + y * y),
-			r = node.radius + quad.point.radius;
+			r = node.radius + 0.5 + quad.point.radius;			// 0.5 to adjust for circle stroke...
 			if (l < r) {
 				l = (l - r) / l * .5;
 				node.x -= x *= l;
@@ -250,17 +250,34 @@ var interpolateNodeSize = function(node) {
 
 
 
+// SVG Accessor
+var arc = d3.svg.arc()
+		.innerRadius(function(d) { return 5 })
+		.outerRadius(function(d) { 
+			console.log(d);
+			return 20;
+			});
+
 
 
 var updateNodeDisplay = function(n) {
 	
 	force.charge(0);
 	
+	// create circle gripus
 	circleGroups = cellGroup.selectAll("g.circles")						// select
-		.data(cells, function(n) { return n.id; } );			// rebind with key
-
+			.data(cells, function(n) { return n.id; } );			// rebind with key
+		
 	force.nodes(cells, function(n) { return n.id; } );			// rebind new cells with force layout
 	
+	
+	circleGroups.exit()
+		.transition()
+			.duration(199)				// match with delay time at adding cells..., or remove transition completely
+			.ease("cubic-in-out")
+			.attr("r", 0)
+		.remove();
+		
 	/*
 	// create new link map
 	links = [];
@@ -277,31 +294,19 @@ var updateNodeDisplay = function(n) {
 	
 //	force.links(links, function(d,i) { i + "-" + d.source.id + "-" + d.target.id; });
 	force.start();
-	/*
-	circles.enter()											// enter
-		.append("circle")
-			.attr("r", 0)									// initial radius
-			.attr("x", function(n) { return n.x; })
-			.attr("y", function(n) { return n.y; })
-			.attr("fill", function(n) {return n.color})
-			.transition()
-				.duration(1000)
-				.ease("cubic-in-out")		// match with interpolateNodeSize()
-				.attr("r", function(n) { return n.finalRadius; })
-				.each("start", function(n) { interpolateNodeSize(n); })
-			;	// update visuals
-	*/	
-	newCircles = circleGroups.enter()											// enter
+
+	// Center Circ
+	var circleGroupsEnter = circleGroups.enter()											// enter
 		.append("g")
 			.attr("class", "circles")
 			.attr("transform", function(n) { return "translate("+ n.x +","+ n.y +")" });
-		//	.attr("x", function(n) { return n.x; })
-		//	.attr("y", function(n) { return n.y; })
 
-	newCircles
+	// background circles
+	var backgroundCircles = circleGroupsEnter
 		.append("circle")
 			.attr("r", 0)									// initial radius
-			.attr("fill", function(n) {return n.color})
+			.attr("class", "backgroundCircles")
+			.attr("stroke", function(n) {return n.color})
 			.transition()
 				.duration(1000)
 				.ease("cubic-in-out")		// match with interpolateNodeSize()
@@ -309,14 +314,28 @@ var updateNodeDisplay = function(n) {
 				.each("start", function(n) { interpolateNodeSize(n); })
 			;	// update visuals
 
+	// center circles
+	var centerCircles = circleGroupsEnter
+		.append("circle")
+			.attr("r", 0)									// initial radius
+			.attr("fill", function(n) {return n.color})
+			.attr("class", "centerCircles")
+			.transition()
+				.duration(1000)
+				.ease("cubic-in-out")		// match with interpolateNodeSize()
+				.attr("r", function(n,i) { return n.finalRadius/3+1; })
+				//.each("start", function(n) { interpolateNodeSize(n/3); })
+			;	// update visuals
 
 
-	circleGroups.exit()
-		.transition()
-			.duration(199)				// match with delay time at adding cells..., or remove transition completely
-			.ease("cubic-in-out")
-			.attr("r", 0)
-		.remove();
+						
+	// Polar Chart // find a more D3y way to do this.. check out 'charts' proposal...
+	createPolarChart(circleGroupsEnter);
+
+				
+				
+				
+
 	
 	
 /*
@@ -349,6 +368,59 @@ var updateNodeDisplay = function(n) {
 
 	
 }
+
+// define arcLayout
+var arcLayout = function() {
+	var g = 100;
+	var d = 15;
+	var layout = d3.range(g).map(function(a,i){
+		if (i<d) return 4/g;	// double width of first d genes
+		return 1/g;
+	});
+	return layout;
+}();
+
+// polarChart helper function
+var createPolarChart = function(element) {
+
+	var i = element.data().length-1;
+	var cell = element.data()[i];
+	
+	// don't draw below 10 summary cells
+	if (!cell.summary || !cell.summary.steps || cell.summary.steps.length < 10) return;
+		
+	var container = d3.select(element[0][i])
+		.append("g")
+		.data([arcLayout])			// pie angles
+		.attr("class", "container");
+	
+	var geneLevel = d3.range(100).map(function() {
+		return Math.random();
+	});
+	
+	radius = cell.finalRadius;
+	var arcs = container.selectAll("path.segment")
+	    .data(d3.layout.pie())	// layout is specified as data in paths
+	  .enter()
+		.append("path")
+	 	.attr("class", "segment")
+		.attr("fill", function(d,i) { return cell.color })
+	    .attr("d", d3.svg.arc()
+			.innerRadius(0)
+			.outerRadius(0))
+		.attr("fill-opacity", 0)
+		.transition()
+			.delay(1000)
+			.duration(1000)
+			.attr("fill-opacity", function(d,i) { return geneLevel[i] })
+			.attr("d", d3.svg.arc()
+				.innerRadius(radius/3+1)
+				.outerRadius(function(d,i) { return radius/3 + (radius*2/3) * geneLevel[i] }))
+		
+	
+}
+
+
 
 
 // find closed ancestor of a cell. in cases when the parent died, create link to ancestor.
