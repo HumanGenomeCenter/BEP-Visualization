@@ -11,8 +11,8 @@ var settings = {
 	deathRateForNonStem: 0.01,
 	srp: 0.1,	//s ymmetricReplicationProbablity
 	fitnessIncrease: 2, 
-	maxNumberOfCells: 10000,
-	initialCells: 8,
+	maxNumberOfCells: 500,
+	initialCells: 5,
 };
 
 var updateSettingsInUI = function() {

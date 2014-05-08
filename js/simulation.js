@@ -303,11 +303,43 @@ summary.reduce = function() {
 	}
 
 	summary.findSummaryParents();
-//	summary.createChanges();
+	summary.createChanges();
 	
 	summary.length = this.map.length;
+	
+	// accumulate gene values
+	
+	// init with 0es
+	
+	
+	summary.cells.map(function(c) {
+	
+		var compoundGenes = d3.range(settings.n - settings.e).map(function() {return 0});
+		
+		
+		c.summary.steps.map(function(s) {
+			var simCell = simulation.cells[s.simulationID];
+			var allGenes = simCell.driverGenes.concat(simCell.genes);
+			
+			var binaryGenes = allGenes.map(function(g) { 
+				if (g === false) return 0;
+				return 1;
+			});
+			compoundGenes = compoundGenes.map(function(x,i) { return x + binaryGenes[i]; });
+		})
+		c.compoundGeneValues = compoundGenes.map(function(x) { return x/c.summary.steps.length; });
+	});
+	
+	
 	summary.cellsCopy = deepCopy(summary.cells);
 	console.log("Summary finished:", summary.cells.length, "Cells");
+	
+
+	
+	// run again if yield isn't high
+	if (summary.cells.length < settings.initialCells*4) {
+		simulation.start();
+	}
 	
 }
 

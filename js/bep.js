@@ -1,8 +1,8 @@
 // https://gist.github.com/mbostock/3231307
 
 // default svg size
-var width = 960;
-var height = 500;
+var width = 640;
+var height = 320;
 
 
 /* - - - - - - - - -  Settings - - - - - - - - -  */
@@ -53,7 +53,7 @@ var updateTree = function() {
 
 
 var zoom = d3.behavior.zoom()
-	.scaleExtent([0.05, 10])	// 1=>100%
+	.scaleExtent([0.05, 20])	// 1=>100%
 	.on("zoom", zoomed);		// register zoom event
 
 function zoomed() {
@@ -232,12 +232,11 @@ function collide(node) {
 
 // Interactions
 
-var interpolateNodeSize = function(node) {	
+var interpolateNodeSize = function(node, duration) {	
 	var easeMode = "cubic-in-out";
 	if (node.radius === node.finalRadius) return;
 	var interpol = d3.interpolateNumber(node.radius, node.finalRadius);
 	var ease= d3.ease(easeMode);
-	var duration = 1000;
 	var timer = d3.timer(function(t){
 		if (t>duration) {
 			node.radius = node.finalRadius;		// make sure the radius become the original radius
@@ -295,24 +294,32 @@ var updateNodeDisplay = function(n) {
 //	force.links(links, function(d,i) { i + "-" + d.source.id + "-" + d.target.id; });
 	force.start();
 
+	// Enter
 	// Center Circ
 	var circleGroupsEnter = circleGroups.enter()											// enter
 		.append("g")
 			.attr("class", "circles")
 			.attr("transform", function(n) { return "translate("+ n.x +","+ n.y +")" });
 
+	// Polar Chart // find a more D3y way to do this.. check out 'charts' proposal...
+	
+				
 	// background circles
 	var backgroundCircles = circleGroupsEnter
 		.append("circle")
 			.attr("r", 0)									// initial radius
 			.attr("class", "backgroundCircles")
+		//	.attr("fill-opacity", 0.5)
 			.attr("stroke", function(n) {return n.color})
 			.transition()
-				.duration(1000)
+				.duration(2000)
 				.ease("cubic-in-out")		// match with interpolateNodeSize()
 				.attr("r", function(n) { return n.finalRadius; })
-				.each("start", function(n) { interpolateNodeSize(n); })
+				.each("start", function(n) { interpolateNodeSize(n,2000); })
 			;	// update visuals
+
+	createPolarChart(circleGroupsEnter);
+	
 
 	// center circles
 	var centerCircles = circleGroupsEnter
@@ -321,19 +328,17 @@ var updateNodeDisplay = function(n) {
 			.attr("fill", function(n) {return n.color})
 			.attr("class", "centerCircles")
 			.transition()
-				.duration(1000)
+				.duration(2000)
 				.ease("cubic-in-out")		// match with interpolateNodeSize()
 				.attr("r", function(n,i) { return n.finalRadius/3+1; })
 				//.each("start", function(n) { interpolateNodeSize(n/3); })
 			;	// update visuals
 
 
-						
-	// Polar Chart // find a more D3y way to do this.. check out 'charts' proposal...
-	createPolarChart(circleGroupsEnter);
+
 
 				
-				
+	
 				
 
 	
@@ -387,6 +392,8 @@ var createPolarChart = function(element) {
 	var cell = element.data()[i];
 	
 	// don't draw below 10 summary cells
+	if (cell === undefined) return;
+	if (cell.summary === undefined) return;
 	if (!cell.summary || !cell.summary.steps || cell.summary.steps.length < 10) return;
 		
 	var container = d3.select(element[0][i])
@@ -394,13 +401,9 @@ var createPolarChart = function(element) {
 		.data([arcLayout])			// pie angles
 		.attr("class", "container");
 	
-	// gene data
-	var geneLevel = summary.genesToValues(cell);
-	/*
-	var geneLevel = d3.range(100).map(function() {
-		return Math.random();
-	});
-	*/
+	// compund gene data
+	var geneLevel = cell.compoundGeneValues;
+
 	
 	radius = cell.finalRadius;
 	var arcs = container.selectAll("path.segment")
@@ -409,16 +412,21 @@ var createPolarChart = function(element) {
 		.append("path")
 	 	.attr("class", "segment")
 		.attr("fill", function(d,i) { 
-			if (i>15) return d3.rgb(cell.color).brighter();
-			return d3.rgb(cell.color).darker();
+			// if (i>15) return d3.rgb(cell.color).brighter();
+			if (i>15) return "#bbbbbb";
+			return cell.color;
 		})
 	    .attr("d", d3.svg.arc()
 			.innerRadius(radius/3+1)
 			.outerRadius(radius/3+1))
 		.attr("fill-opacity", 0)
 		.transition()
-			.delay(1000)
-			.duration(1000)
+			.delay(function(d,i){return 1000 + 100*i})
+			.duration(function() { 
+			//	console.log("duration", cell.summary.steps.length*1000);
+				//return cell.summary.steps.length*250;
+				return 2000;
+			})
 			.attr("fill-opacity", function(d,i) { return geneLevel[i] })	// fade in
 			.attr("d", d3.svg.arc()		// scale
 				.innerRadius(radius/3+1)
@@ -495,14 +503,25 @@ var addAdditionalCells = function(limit) {
 		
 		// add cell
 		var cell = summary.cells[cachedCellCounter]; 		// get next cached cell
-		cachedCellCounter++;							// increase cached cell counter
+									// increase cached cell counter
 		
 		var parentCell = summary.cells[cell.summary.parent];		// get parent cell with cell.parent it from cachedCells, because cells[] position will change when cells die
 	
 		cell.color = simulation.varyColor(parentCell.color);
 		cell.x = Math.cos(cell.randomAngle)*parentCell.radius + parentCell.x;
 		cell.y = Math.sin(cell.randomAngle)*parentCell.radius + parentCell.y;
+		
+		/*
+		// update cells size
+		console.log("now", cachedCellCounter);
+		cell.summary.steps.map(function(d,i){
+			console.log("\t steps", d.summaryID);
+		});
+		*/
+		
 		cells.push(cell);
+		
+		
 		
 		// check for dead cells and remove
 		
@@ -523,6 +542,8 @@ var addAdditionalCells = function(limit) {
 			var deletedCell = cells.splice(d, 1); 
 		}
 		*/
+		
+		cachedCellCounter++;
 		updateNodeDisplay();
 		
 		// stop adding cells

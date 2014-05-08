@@ -2,14 +2,14 @@
 }
 
 .controls input {
-	width: 100%;
+
 }
 .simulation {
 }
 
-.simulation canvas {
-	width: 540px;
-	height: 540px;
-	background: #efefef;
-}
 
+
+#cells, #cells svg {
+	width: 1280px;
+	height: 540px;
+}

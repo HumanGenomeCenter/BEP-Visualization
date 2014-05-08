@@ -1,3 +1,5 @@
+var cursorHidden = false;
+
 $(document).ready(function() {
 	
 	$("#simulate").click(function() {
@@ -48,5 +50,22 @@ $(document).ready(function() {
 		zoomBehaviour('reset');
 	});
 	
+	
+	// hide cursor for filming
+	$("body").keydown(function(e) {
+		if (e.keyCode === 77) {
+			if (cursorHidden) {
+				$("body").css("cursor","auto");		// show
+				cursorHidden = false;
+			} else {
+				$("body").css("cursor","none");		// hide
+				cursorHidden = true;
+			}
+		} 
+	});
+
+	
+	
+
 
 });	
