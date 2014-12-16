@@ -16,18 +16,37 @@ $(document).ready(function() {
 	});
 	
 	$("#replaySimulation").click(function() {
-		simulating = false;
-		console.log("replay");
-				
-		reset();
-		updateNodeDisplay();
 		
-		addInitialCells(function() {
-			console.log("next");
-			summary.replay();
-			simulating = true;
-			addAdditionalCells();
-		});
+		d3.selectAll("circle")
+			.transition()
+			.delay(500)
+			.duration(1000)
+			.attr("r", 0);
+		
+		d3.selectAll("path")
+			.transition()
+			.duration(500)
+			.attr("fill-opacity",0);
+			
+		// fade out
+		setTimeout(function() {
+				simulating = false;
+				console.log("replay");
+
+				reset();
+				updateNodeDisplay();
+
+				addInitialCells(function() {
+					console.log("next");
+					summary.replay();
+					simulating = true;
+					addAdditionalCells();
+				});
+		
+		
+	    }, 1600);
+		
+	
 	});
 
 	

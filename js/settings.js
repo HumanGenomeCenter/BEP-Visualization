@@ -5,14 +5,14 @@ var settings = {
 	n: 100,						// number of genes
 	d: 15, 						// number of driver genes, first d genes of g
 	e: 5,						// number of essential genes 
-	mutationRate: 0.1,			// mutation probabiliy of each gene when replicated
-	growthRate: 0.01,			// 0.0001
+	mutationRate: 0.01,			// mutation probabiliy of each gene when replicated
+	growthRate: 0.001,			// 0.0001
 	deathRate: 0.01,		
 	deathRateForNonStem: 0.01,
-	srp: 0.1,	//s ymmetricReplicationProbablity
-	fitnessIncrease: 2, 
-	maxNumberOfCells: 500,
-	initialCells: 5,
+	srp: 0.5,	//s ymmetricReplicationProbablity
+	fitnessIncrease: 4, 
+	maxNumberOfCells: 2000,
+	initialCells: 8,
 };
 
 var updateSettingsInUI = function() {

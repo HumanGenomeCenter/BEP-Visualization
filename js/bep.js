@@ -2,7 +2,7 @@
 
 // default svg size
 var width = 640;
-var height = 320;
+var height = 360;
 
 
 /* - - - - - - - - -  Settings - - - - - - - - -  */

@@ -92,6 +92,7 @@ var Cell = function(parent) {
 /* Create Array of string colors, declare function & execute once */
 simulation.getColor = function() {
 	return colorbrewer.Set1[9].map(function(c){ return c; });
+//	return colorbrewer.Spectral[11].map(function(c){ return c; });
 //	return colorbrewer.Set3[12].map(function(c){ return c; });
 }();
 
