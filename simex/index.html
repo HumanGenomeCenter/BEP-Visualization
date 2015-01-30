@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<head>
+	<meta charset="utf-8">
+	<title>BEP Simulation Explorer</title>
+	<link rel="stylesheet" href="../css/bootstrap.css" charset="utf-8">
+	<link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,700,800' rel='stylesheet' type='text/css'>
+	<style type="text/css" media="screen">
+	body {
+		font-family: 'Open Sans', sans-serif;
+		background: #ffffff;
+		margin: 0 auto;
+		-webkit-touch-callout: none;
+	    -webkit-user-select: none;
+	    -khtml-user-select: none;
+	    -moz-user-select: none;
+	    -ms-user-select: none;
+	    user-select: none;
+		
+	}
+	a, a:hover, a:active, a:selected {
+		text-decoration: none;
+		color: #428bca;
+	}
+	h1 {
+		font-family: 'Open Sans', sans-serif;
+		font-weight: 300;
+		font-size: 4em;
+		color: #999;
+	}
+	.container {
+	 /* margin: 0 auto; */
+	  width: 990px !important;
+	}
+	.page-header {
+		text-align: center;
+	}
+	
+
+	
+	#overview {
+		margin-top: 20px;
+	}
+		
+	#overview svg {
+		/* background: #fff; */
+	}
+	g.boxes {
+		fill: green;
+	}
+
+	.button a, .button .label {
+		font-size: 14px;
+		border-radius: 25px;
+		width: 50px;
+		height: 50px;
+		line-height: 50px; 	/* some as parent height, https://developer.mozilla.org/en-US/docs/Web/CSS/vertical-align*/
+		padding: 0;
+		display: inline-block;
+		text-align: center;
+		vertical-align: middle;
+		text-decoration: none;
+		transition: background 0.5s linear;
+	    -moz-transition: background 0.5s linear; /* Firefox 4 */
+	    -webkit-transition: background 0.5s linear; /* Safari and Chrome */
+	}
+	
+	.button .label {
+		color: #666;
+		font-weight: 100;
+	}
+	
+	.button a:hover, .button a:active {
+		background: #f6f6f6;
+		color: #428bca;
+	}
+	
+	.button .selected {
+		background: #f6f6f6;
+		color: #428bca;
+		font-weight: 700;
+	}
+	
+	.axis path,
+	.axis line {
+	  fill: none;
+	  stroke: #666;
+	}
+	
+	.axis text {
+		font-size: 10px;
+		fill: #666;
+	}
+	
+	img {
+		width: 100%;
+	}
+	.results {
+		margin-top: 50px;
+		margin-bottom: 50px;
+	}
+	
+	.results a {
+		text-decoration: none;
+	}
+	
+	.results > div {
+		margin-left: 28px;
+		padding: 0px;
+	}
+	
+	.results img {
+		width: 45%;
+		display: inline;
+	}
+
+
+	.line {
+		height: 4px;
+		width: 100%;
+		background: #fff;
+		margin-top: 8px;
+	}
+	
+	.details {
+		display: none;
+	}
+
+	.details img {
+		width: 100%;
+	}
+	
+	.caption, .values {
+		text-align: center;
+	}
+	
+	.caption {
+		margin-bottom: 30px;
+	}
+	
+	.tab-pane {
+		margin-top: 30px;
+	}
+</style>
+	
+</head>
+
+<body>
+	
+<div class="container">
+	<div class="page-header">
+	  <h1>B.E.P Simulation Investigator</h1>
+	</div>
+	
+	<div class="row">
+		
+		<div role="tabpanel">
+
+			<!-- Nav tabs -->
+			<ul class="nav nav-tabs" role="tablist">
+				<li role="presentation" class="active"><a href="#home" aria-controls="home" role="tab" data-toggle="tab">Home</a></li>
+				<li role="presentation"><a href="#profile" aria-controls="profile" role="tab" data-toggle="tab">Overview</a></li>
+				<li role="presentation"><a href="#about" aria-controls="about" role="tab" data-toggle="tab">About</a></li>
+			</ul>
+
+	
+		</div>
+		
+
+	</div>
+	
+	
+	<!-- Tab panes -->
+	<div class="tab-content">
+		<div role="tabpanel" class="tab-pane active" id="home">
+			
+	
+		
+			<div class="col-xs-12">
+					<span id="s" class="button">
+						<div class="label">S</div>
+						<a href="#">0.01</a>
+						<a href="#" class="selected">0.1</a>
+						<a href="#">1</a>
+					</span>
+
+					<span id="r" class="button">
+						<span class="label">R</span>
+						<a href="#">0.0001</a>
+						<a href="#" class="selected">0.001</a>
+						<a href="#">0.01</a>
+					</span>
+			
+					<span id="d" class="button">
+						<span class="label">D</span>
+						<a href="#" class="selected">4</a>
+					</span>
+			
+					<span id="f" class="button">
+						<span class="label">F</span>
+						<a href="#" class="selected">0.8</a>
+					</span>
+			
+					<span id="abs" class="button">
+						<span class="label">scale</span>
+						<a href="#" data-value="abs">abs</a>
+						<a href="#" class="selected" data-value="rel">rel</a>
+					</span>
+				</div>
+		
+			<div class="row">
+				<div class="col-xs-12">
+					<div id="overview" width="100%" height="500px"></div>
+				</div>
+			</div>
+	
+			<div class="row results">
+				<div class="col-xs-2">
+					<a href="#" data-id="0">
+						<img class="tumor" src="results/s0.01_r0.0001/d5_f0.8_0.tumor.png">
+						<img class="mutprof" src="results/s0.01_r0.0001/d5_f0.8_0.mutprof.png">
+					</a>
+					<div class="line"></div>
+				</div>
+				<div class="col-xs-2">
+					<a href="#" data-id="1">
+						<img class="tumor" src="results/s0.01_r0.0001/d5_f0.8_1.tumor.png">
+						<img class="mutprof" src="results/s0.01_r0.0001/d5_f0.8_1.mutprof.png">
+					</a>
+					<div class="line"></div>
+				</div>
+				<div class="col-xs-2">
+					<a href="#" data-id="2">
+						<img class="tumor" src="results/s0.01_r0.0001/d5_f0.8_2.tumor.png">
+						<img class="mutprof" src="results/s0.01_r0.0001/d5_f0.8_2.mutprof.png">
+					</a>
+					<div class="line"></div>
+				</div>
+				<div class="col-xs-2">
+					<a href="#" data-id="3">
+						<img class="tumor" src="results/s0.01_r0.0001/d5_f0.8_3.tumor.png">
+						<img class="mutprof" src="results/s0.01_r0.0001/d5_f0.8_3.mutprof.png">
+					</a>
+					<div class="line"></div>
+				</div>
+				<div class="col-xs-2">
+					<a href="#" data-id="4">
+						<img class="tumor" src="results/s0.01_r0.0001/d5_f0.8_4.tumor.png">
+						<img class="mutprof" src="results/s0.01_r0.0001/d5_f0.8_4.mutprof.png">
+					</a>
+					<div class="line"></div>
+				</div>
+			</div>
+	
+			<div class="details">
+		
+		<div class="row values"></div>
+		
+		<div class="row mutprof">
+			<div class="col-xs-6">
+				<img src='http://127.0.0.1/bep/simex/results/s0.01_r0.0001/d4_f0.8_1.mutprof.png'>
+			</div>
+			<div class="col-xs-6">
+				<img src='http://127.0.0.1/bep/simex/results/s0.01_r0.0001/d4_f0.8_1.mutprof.png'>
+			</div>
+		</div>
+		
+		<div class="row caption">
+			<figcaption>
+			<b>Mutation profile of each cell in a simulated tumor.</b>
+			500 cells were sampled from the simulated tumor and their mutation profiles were shown as a clustered heatmap.
+			Row and columns represent gene and cells, respectively. left blue bars indicate driver genes and top colored indicates each clone.
+			</figcaption>
+		</div>
+	
+		<div class="row tumor">
+			<figure>
+				<img src='d10_f0.15_0.tumor.png'>
+			</figure>
+		</div>
+		
+		<div class="row caption">
+			<figcaption>
+			<b>The simulated tumor.</b>
+			 Each clone was colored  according to top colored bar of the mutation profile heatmap.
+			</figcaption>
+		</div>
+
+		<div class="row pc">
+			<figure>
+				<img src='d10_f0.15_0.pc.png'>
+			</figure>
+		</div>
+
+		<div class="row caption">
+			<figcaption>
+				<b>A principal component plot of cells.</b>
+				Principal component analysis was applied to the mutation profiles and 
+				each cell was plotted based on loadings of the top three principal components.
+				Note that colors of each clone was obtained from the three dimensional coordinates.
+			</figcaption>
+		</div>
+	
+		<div class="row selfsim">
+			<figure>
+				<img src='d10_f0.15_0.selfsim.png'>
+			</figure>
+		</div>
+	
+		<div class="row caption">
+			<figcaption>
+				<b> Self similality of the cell-wise dendrogram. </b>
+				From the  the cell-wise dendrogram of the mutation profile heatmap, 
+				we obtained <i>c</i> clusters by cutting the dendrogram at the height <i>l</i>. the relationship between <i>c</i> and <i>l</i> was plotted in log scale.
+				vertical and horizontal axes denote <i>c</i> and <i>l</i>, respectively. Since their linear relationship indicates self similality,
+				we performed linear regression between <i>log</i>(<i>c</i>) and <i>log</i>(<i>l</i>), and assumed that the dendrogram has self-similarity if R<sup>2</sup> &gt 0.95
+			</figcaption>
+		</div>
+
+		<div class="row cellsim">
+			<figure>
+				<img src='d10_f0.15_0.cellsim.png'>
+			</figure>
+		</div>
+	
+		<div class="row caption">
+			<figcaption>
+				<b> Genetic distance matrix among cells.</b>
+				Distance between each pair of cells was calculated from the mutation profiles and presented as a heatmap.  
+			</figcaption>
+		</div>
+	
+		<div class="row alfrq">
+			<figure>
+				<img src='d10_f0.15_0.alfrq.png'>
+			</figure>
+		</div>
+	
+		<div class="row caption">
+			<figcaption>
+				<b>A histogram of the mutant cell frequencies.</b>
+				For each gene, a fraction of mutated cells was calculated and the distribution was presented as the histogram.
+			</figcaption>
+		</div>
+				
+	</div>
+
+
+	</div>
+	<div role="tabpanel" class="tab-pane" id="profile">
+		
+		<div class="col-xs-12">
+			<img src="results/heatmap/founderMutationCount.jpg">
+		</div>
+		
+		
+	</div>
+	<div role="tabpanel" class="tab-pane" id="about">about.</div>
+</div>
+
+
+</div>
+
+<br />
+<br />
+
+<script src="../js/d3.min.js"></script>
+<script src="../js/jquery-2.0.3.min.js"></script>
+<script src="../js/bootstrap.min.js"></script>
+
+<script src="./js/simex.js"></script>
+
+</body>
+</html>
